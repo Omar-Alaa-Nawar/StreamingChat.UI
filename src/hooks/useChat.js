@@ -82,16 +82,16 @@ const useChat = () => {
     const parts = [];
     let lastMatchEnd = 0;
 
-    // Build a map of existing component data by ID for merging
-    const existingComponentData = new Map();
+    // Track components by ID for merging updates during streaming
+    // Maps component ID -> complete component object { type, componentType, id, data }
+    const componentMap = new Map();
+
+    // Initialize with existing components from previous parse
     existingParts.forEach((part) => {
       if (part.type === "component" || part.type === "component-streaming") {
-        existingComponentData.set(part.id, part.data);
+        componentMap.set(part.id, part);
       }
     });
-
-    // Track components we've seen in current buffer to detect updates
-    const seenInBuffer = new Map();
 
     // Regex to find $$$...$$$  blocks (triple dollar signs - Phase 2 backend)
     const componentRegex = /\$\$\$(.*?)\$\$\$/gs;
@@ -130,48 +130,34 @@ const useChat = () => {
         ) {
           const componentId = componentData.id;
 
-          // Check if we've already seen this component ID in the current buffer
-          if (seenInBuffer.has(componentId)) {
-            console.log("[UPDATE] Updating component in buffer:", componentId);
-            // Get the existing component from our buffer parse
-            const existingInBuffer = seenInBuffer.get(componentId);
-            // Deep merge with new data to ensure new object reference
-            existingInBuffer.data = mergeData(
-              existingInBuffer.data,
-              componentData.data
-            );
-            console.log("[MERGE] Updated data:", existingInBuffer.data);
+          // Check if component already exists (either from previous parse or earlier in buffer)
+          if (componentMap.has(componentId)) {
+            logger.debug("[UPDATE]", "Updating component:", componentId);
+            // Get the existing component
+            const existingComponent = componentMap.get(componentId);
+            // Create new component object with merged data (immutable update)
+            const updatedComponent = {
+              ...existingComponent,
+              data: mergeData(existingComponent.data, componentData.data),
+            };
+            // Update the map with the new reference
+            componentMap.set(componentId, updatedComponent);
+            logger.debug("[MERGE]", "Updated data:", updatedComponent.data);
           } else {
-            // First time seeing this component in current buffer
-            const existingData = existingComponentData.get(componentId);
-
+            // New component - create and add to map
             const newComponent = {
               type: "component",
               componentType: componentData.type,
               id: componentId,
-              data: existingData
-                ? mergeData(existingData, componentData.data)
-                : componentData.data,
+              data: componentData.data,
             };
 
-            if (existingData) {
-              console.log(
-                "[MERGE] Merging with existing component:",
-                componentId,
-                "Old data:",
-                existingData,
-                "New data:",
-                componentData.data,
-                "Merged:",
-                newComponent.data
-              );
-            } else {
-              console.log("[NEW] Adding new component:", componentId);
-            }
-
-            parts.push(newComponent);
-            seenInBuffer.set(componentId, newComponent);
+            logger.debug("[NEW]", "Adding new component:", componentId);
+            componentMap.set(componentId, newComponent);
           }
+
+          // Add component to parts (either new or updated from map)
+          parts.push(componentMap.get(componentId));
         } else {
           logger.debug(
             "[PARSE]",
@@ -193,8 +179,9 @@ const useChat = () => {
     // We need to find the FIRST $$$ after lastMatchEnd that doesn't have a closing $$$
     const remainingBuffer = buffer.substring(lastMatchEnd);
     const firstTripleDollar = remainingBuffer.indexOf("$$$");
-    console.log(
-      "[PARSE] Checking for incomplete component. firstTripleDollar in remaining:",
+    logger.debug(
+      "[PARSE]",
+      "Checking for incomplete component. firstTripleDollar in remaining:",
       firstTripleDollar,
       "lastMatchEnd:",
       lastMatchEnd
@@ -205,7 +192,7 @@ const useChat = () => {
       // Check if there's a closing $$$ after this opening $$$
       const hasClosing =
         remainingBuffer.indexOf("$$$", firstTripleDollar + 3) !== -1;
-      console.log("[PARSE] Has closing $$:", hasClosing);
+      logger.debug("[PARSE]", "Has closing $$$:", hasClosing);
 
       if (!hasClosing) {
         // We have an incomplete component, show text up to $$
@@ -309,7 +296,7 @@ const useChat = () => {
 
         // Parse buffer for components and text, passing existing parts for merging
         const contentParts = parseBufferForComponents(buffer, currentParts);
-        console.log("[STREAM] Parsed into", contentParts.length, "parts");
+        logger.debug("[STREAM]", "Parsed into", contentParts.length, "parts");
 
         // Update current parts for next iteration
         currentParts = contentParts;
