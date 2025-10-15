@@ -1,4 +1,5 @@
-import SimpleComponent from './SimpleComponent';
+import SimpleComponent from "./SimpleComponent";
+import TableA from "./TableA";
 
 /**
  * Component Registry - Maps component type strings to React components
@@ -13,8 +14,8 @@ import SimpleComponent from './SimpleComponent';
  */
 const ComponentRegistry = {
   SimpleComponent: SimpleComponent,
+  TableA: TableA,
   // Future components:
-  // TableComponent: TableComponent,
   // ChartComponent: ChartComponent,
   // etc.
 };

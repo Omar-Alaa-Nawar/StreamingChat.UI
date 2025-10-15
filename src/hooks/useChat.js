@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import useChatStore from "../stores/chat-store";
-import logger from "../utils/logger";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8001";
 
@@ -44,9 +43,9 @@ const useChat = () => {
     } catch (error) {
       // Don't show error for user-initiated abort
       if (error.name === "AbortError") {
-        logger.info("[STREAM]", "Stream stopped by user");
+        console.log("Stream stopped by user");
       } else {
-        logger.error("[STREAM]", "Error fetching chat stream:", error);
+        console.error("Error fetching chat stream:", error);
         // You could update the store with an error message here
       }
     } finally {
@@ -56,12 +55,54 @@ const useChat = () => {
   };
 
   /**
-   * Deep merge helper - ensures new object reference to trigger React re-render
-   * Uses JSON.parse(JSON.stringify()) to create deep clone
+   * Generate a fast hash for a row array
+   * Uses simple string concatenation with a delimiter to avoid JSON.stringify overhead
    */
-  const mergeData = (oldData = {}, newData = {}) => {
-    // Deep clone to force new reference and merge nested objects
-    return JSON.parse(JSON.stringify({ ...oldData, ...newData }));
+  const hashRow = (row) => {
+    return row.map((cell) => String(cell ?? "")).join("|");
+  };
+
+  /**
+   * Smart merge for component data - handles arrays intelligently
+   * For TableA, concatenates rows arrays instead of replacing
+   */
+  const smartMergeComponentData = (existingData, newData, componentType) => {
+    if (componentType === "TableA" && existingData?.rows && newData?.rows) {
+      // For TableA, concatenate rows if they're different
+      // Use a Set with hash-based keys for O(1) duplicate detection
+      const existingRowHashes = new Set(existingData.rows.map(hashRow));
+      const mergedRows = [...existingData.rows];
+
+      // Add new rows that aren't already in the existing rows
+      newData.rows.forEach((newRow) => {
+        const rowHash = hashRow(newRow);
+        if (!existingRowHashes.has(rowHash)) {
+          mergedRows.push(newRow);
+          existingRowHashes.add(rowHash);
+        }
+      });
+
+      console.log(
+        "[SMART MERGE] TableA rows:",
+        "existing:",
+        existingData.rows.length,
+        "new:",
+        newData.rows.length,
+        "merged:",
+        mergedRows.length,
+        "merged data:",
+        mergedRows
+      );
+
+      return {
+        ...existingData,
+        ...newData,
+        rows: mergedRows,
+      };
+    }
+
+    // Default: simple spread merge
+    return { ...existingData, ...newData };
   };
 
   /**
@@ -71,9 +112,8 @@ const useChat = () => {
    * Merges component updates by ID (progressive rendering)
    */
   const parseBufferForComponents = (buffer, existingParts = []) => {
-    logger.debug(
-      "[PARSE]",
-      "Buffer length:",
+    console.log(
+      "[PARSE] Buffer length:",
       buffer.length,
       "First 100 chars:",
       buffer.substring(0, 100)
@@ -82,16 +122,16 @@ const useChat = () => {
     const parts = [];
     let lastMatchEnd = 0;
 
-    // Track components by ID for merging updates during streaming
-    // Maps component ID -> complete component object { type, componentType, id, data }
-    const componentMap = new Map();
-
-    // Initialize with existing components from previous parse
+    // Build a map of existing component data by ID for merging
+    const existingComponentData = new Map();
     existingParts.forEach((part) => {
       if (part.type === "component" || part.type === "component-streaming") {
-        componentMap.set(part.id, part);
+        existingComponentData.set(part.id, part.data);
       }
     });
+
+    // Track components we've seen in current buffer to detect updates
+    const seenInBuffer = new Map();
 
     // Regex to find $$$...$$$  blocks (triple dollar signs - Phase 2 backend)
     const componentRegex = /\$\$\$(.*?)\$\$\$/gs;
@@ -99,11 +139,7 @@ const useChat = () => {
 
     // Find all complete component blocks
     while ((match = componentRegex.exec(buffer)) !== null) {
-      logger.debug(
-        "[PARSE]",
-        "Found complete component at index:",
-        match.index
-      );
+      console.log("[PARSE] Found complete component at index:", match.index);
       // Add text before component (if any)
       if (match.index > lastMatchEnd) {
         const textContent = buffer.substring(lastMatchEnd, match.index);
@@ -115,9 +151,8 @@ const useChat = () => {
       // Try to parse component JSON
       try {
         const componentData = JSON.parse(match[1]);
-        logger.debug(
-          "[PARSE]",
-          "Parsed component:",
+        console.log(
+          "[PARSE] Parsed component:",
           componentData.type,
           componentData.id
         );
@@ -130,44 +165,59 @@ const useChat = () => {
         ) {
           const componentId = componentData.id;
 
-          // Check if component already exists (either from previous parse or earlier in buffer)
-          if (componentMap.has(componentId)) {
-            logger.debug("[UPDATE]", "Updating component:", componentId);
-            // Get the existing component
-            const existingComponent = componentMap.get(componentId);
-            // Create new component object with merged data (immutable update)
-            const updatedComponent = {
-              ...existingComponent,
-              data: mergeData(existingComponent.data, componentData.data),
-            };
-            // Update the map with the new reference
-            componentMap.set(componentId, updatedComponent);
-            logger.debug("[MERGE]", "Updated data:", updatedComponent.data);
+          // Check if we've already seen this component ID in the current buffer
+          if (seenInBuffer.has(componentId)) {
+            console.log("[UPDATE] Updating component in buffer:", componentId);
+            // Get the existing component from our buffer parse
+            const existingInBuffer = seenInBuffer.get(componentId);
+            // Merge with new data using smart merge
+            existingInBuffer.data = smartMergeComponentData(
+              existingInBuffer.data,
+              componentData.data,
+              componentData.type
+            );
           } else {
-            // New component - create and add to map
+            // First time seeing this component in current buffer
+            const existingData = existingComponentData.get(componentId);
+
             const newComponent = {
               type: "component",
               componentType: componentData.type,
               id: componentId,
-              data: componentData.data,
+              data: existingData
+                ? smartMergeComponentData(
+                    existingData,
+                    componentData.data,
+                    componentData.type
+                  )
+                : componentData.data,
             };
 
-            logger.debug("[NEW]", "Adding new component:", componentId);
-            componentMap.set(componentId, newComponent);
-          }
+            if (existingData) {
+              console.log(
+                "[MERGE] Merging with existing component:",
+                componentId,
+                "Old data:",
+                existingData,
+                "New data:",
+                componentData.data,
+                "Merged:",
+                newComponent.data
+              );
+            } else {
+              console.log("[NEW] Adding new component:", componentId);
+            }
 
-          // Add component to parts (either new or updated from map)
-          parts.push(componentMap.get(componentId));
+            parts.push(newComponent);
+            seenInBuffer.set(componentId, newComponent);
+          }
         } else {
-          logger.debug(
-            "[PARSE]",
-            "Invalid component structure, treating as text"
-          );
+          console.log("[PARSE] Invalid component structure, treating as text");
           // Invalid structure, treat as text
           parts.push({ type: "text", content: match[0] });
         }
       } catch (e) {
-        logger.debug("[PARSE]", "JSON parse failed:", e.message);
+        console.log("[PARSE] JSON parse failed:", e.message);
         // JSON parse failed, treat as text
         parts.push({ type: "text", content: match[0] });
       }
@@ -179,9 +229,8 @@ const useChat = () => {
     // We need to find the FIRST $$$ after lastMatchEnd that doesn't have a closing $$$
     const remainingBuffer = buffer.substring(lastMatchEnd);
     const firstTripleDollar = remainingBuffer.indexOf("$$$");
-    logger.debug(
-      "[PARSE]",
-      "Checking for incomplete component. firstTripleDollar in remaining:",
+    console.log(
+      "[PARSE] Checking for incomplete component. firstTripleDollar in remaining:",
       firstTripleDollar,
       "lastMatchEnd:",
       lastMatchEnd
@@ -192,7 +241,7 @@ const useChat = () => {
       // Check if there's a closing $$$ after this opening $$$
       const hasClosing =
         remainingBuffer.indexOf("$$$", firstTripleDollar + 3) !== -1;
-      logger.debug("[PARSE]", "Has closing $$$:", hasClosing);
+      console.log("[PARSE] Has closing $$:", hasClosing);
 
       if (!hasClosing) {
         // We have an incomplete component, show text up to $$
@@ -200,24 +249,22 @@ const useChat = () => {
           const textContent = buffer.substring(lastMatchEnd, incompleteStart);
           if (textContent) {
             parts.push({ type: "text", content: textContent });
-            logger.debug("[PARSE]", "Added text before incomplete component");
+            console.log("[PARSE] Added text before incomplete component");
           }
         }
 
         // Try to parse incomplete JSON as streaming component
-        const incompleteJson = buffer.substring(incompleteStart + 2);
-        logger.debug(
-          "[PARSE]",
-          "Incomplete JSON:",
+        const incompleteJson = buffer.substring(incompleteStart + 3);
+        console.log(
+          "[PARSE] Incomplete JSON:",
           incompleteJson.substring(0, 50)
         );
 
         if (incompleteJson.trim()) {
           try {
             const partialData = JSON.parse(incompleteJson + '}"}');
-            logger.debug(
-              "[PARSE]",
-              "Streaming component with partial data:",
+            console.log(
+              "[PARSE] Streaming component with partial data:",
               partialData
             );
             // We have some parseable data, show as streaming component
@@ -228,11 +275,10 @@ const useChat = () => {
               data: partialData.data || {},
               rawJson: incompleteJson,
             });
-            logger.debug("[PARSE]", "Added streaming component");
+            console.log("[PARSE] Added streaming component");
           } catch (e) {
-            logger.debug(
-              "[PARSE]",
-              "Could not parse incomplete JSON yet, showing as text"
+            console.log(
+              "[PARSE] Could not parse incomplete JSON yet, showing as text"
             );
             // Not enough JSON yet, show as text
             parts.push({ type: "text", content: "$$$" + incompleteJson });
@@ -257,7 +303,7 @@ const useChat = () => {
       }
     }
 
-    logger.debug("[PARSE]", "Returning", parts.length, "parts");
+    console.log("[PARSE] Returning", parts.length, "parts");
     return parts;
   };
 
@@ -272,23 +318,21 @@ const useChat = () => {
         const { done, value } = await reader.read();
 
         if (done) {
-          logger.debug("[STREAM]", "Stream complete");
+          console.log("[STREAM] Stream complete");
           break;
         }
 
         // Decode the chunk and add to buffer
         const chunk = decoder.decode(value, { stream: true });
-        logger.debug(
-          "[STREAM]",
-          "Raw chunk size:",
+        console.log(
+          "[STREAM] Raw chunk size:",
           value.length,
           "Decoded chunk:",
           chunk
         );
         buffer += chunk;
-        logger.debug(
-          "[STREAM]",
-          "Received chunk, buffer length:",
+        console.log(
+          "[STREAM] Received chunk, buffer length:",
           buffer.length,
           "New chars:",
           chunk.length
@@ -296,7 +340,7 @@ const useChat = () => {
 
         // Parse buffer for components and text, passing existing parts for merging
         const contentParts = parseBufferForComponents(buffer, currentParts);
-        logger.debug("[STREAM]", "Parsed into", contentParts.length, "parts");
+        console.log("[STREAM] Parsed into", contentParts.length, "parts");
 
         // Update current parts for next iteration
         currentParts = contentParts;
@@ -305,7 +349,7 @@ const useChat = () => {
         updateAgentMessage(contentParts);
       }
     } catch (error) {
-      logger.error("[STREAM]", "Error:", error);
+      console.error("[STREAM] Error:", error);
       // Re-throw to be caught by fetchChatStream
       throw error;
     } finally {
