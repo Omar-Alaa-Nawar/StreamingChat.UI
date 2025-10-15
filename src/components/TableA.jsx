@@ -1,4 +1,102 @@
 import React from "react";
+import PropTypes from "prop-types";
+
+/**
+ * Helper function to determine container CSS classes based on table state
+ */
+const getContainerClasses = (isEmpty, hasData, isComplete) => {
+  return [
+    "border rounded-2xl p-4 transition-all duration-300",
+    isEmpty && "border-gray-300 bg-gray-50",
+    hasData && !isComplete && "border-indigo-400 bg-white",
+    isComplete &&
+      "border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-md",
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/**
+ * Helper function to determine header CSS classes based on table state
+ */
+const getHeaderClasses = (isEmpty, hasData, isComplete) => {
+  return [
+    "text-left text-sm font-semibold py-2 px-3 border-b-2",
+    isEmpty && "text-gray-400 border-gray-300",
+    hasData && !isComplete && "text-indigo-700 border-indigo-300",
+    isComplete && "text-indigo-800 border-indigo-400",
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/**
+ * Helper function to determine icon CSS classes based on table state
+ */
+const getIconContainerClasses = (isEmpty, hasData, isComplete) => {
+  return [
+    "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
+    isEmpty && "bg-gray-200",
+    hasData && !isComplete && "bg-indigo-100",
+    isComplete && "bg-gradient-to-br from-indigo-400 to-blue-500",
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/**
+ * Helper function to determine icon SVG CSS classes based on table state
+ */
+const getIconClasses = (isEmpty, hasData, isComplete) => {
+  return [
+    "w-5 h-5 transition-colors duration-300",
+    isEmpty && "text-gray-400",
+    hasData && !isComplete && "text-indigo-600",
+    isComplete && "text-white",
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/**
+ * Helper function to determine title CSS classes based on table state
+ */
+const getTitleClasses = (isEmpty, hasData) => {
+  return [
+    "text-sm font-semibold transition-colors duration-300",
+    isEmpty && "text-gray-500",
+    hasData && "text-indigo-700",
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/**
+ * Component to render a single table cell with skeleton fallback
+ */
+const TableCell = ({ cell, rowKey, col, colIndex }) => {
+  const hasValue = cell !== undefined && cell !== null;
+
+  return (
+    <td
+      key={`${rowKey}-cell-${col}-${colIndex}`}
+      className="py-3 px-3 text-sm text-gray-800"
+    >
+      {hasValue ? (
+        <span className="animate-fade-in">{cell}</span>
+      ) : (
+        <div className="skeleton h-4 w-20 rounded"></div>
+      )}
+    </td>
+  );
+};
+
+TableCell.propTypes = {
+  cell: PropTypes.any,
+  rowKey: PropTypes.string.isRequired,
+  col: PropTypes.string.isRequired,
+  colIndex: PropTypes.number.isRequired,
+};
 
 /**
  * TableA Component - Progressive Table Renderer
@@ -17,8 +115,9 @@ import React from "react";
  * @param {Object} props.data - Table data
  * @param {string[]} props.data.columns - Column headers
  * @param {Array[]} props.data.rows - Array of row arrays
+ * @param {number} props.completeThreshold - Minimum number of rows to consider the table complete (default: 3)
  */
-export default function TableA({ data = {} }) {
+export default function TableA({ data = {}, completeThreshold = 3 }) {
   const { columns = [], rows = [] } = data;
 
   // Debug logging
@@ -31,100 +130,63 @@ export default function TableA({ data = {} }) {
   // State detection
   const isEmpty = rows.length === 0;
   const hasColumns = columns.length > 0;
-
-  // Check if we have partial data (some cells might be undefined/null)
   const hasData = rows.length > 0;
-  const isComplete = hasData && rows.length >= 3; // Arbitrary threshold for "complete" visual state
+  const isComplete = hasData && rows.length >= completeThreshold;
 
   // Determine CSS classes based on state
-  const containerClasses = [
-    "border rounded-2xl p-4 transition-all duration-300",
-    isEmpty && "border-gray-300 bg-gray-50",
-    hasData && !isComplete && "border-indigo-400 bg-white",
-    isComplete &&
-      "border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-md",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const headerClasses = [
-    "text-left text-sm font-semibold py-2 px-3 border-b-2",
-    isEmpty && "text-gray-400 border-gray-300",
-    hasData && !isComplete && "text-indigo-700 border-indigo-300",
-    isComplete && "text-indigo-800 border-indigo-400",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const containerClasses = getContainerClasses(isEmpty, hasData, isComplete);
+  const headerClasses = getHeaderClasses(isEmpty, hasData, isComplete);
 
   // Render skeleton rows when empty
   const renderSkeletonRows = () => {
     if (!hasColumns) return null;
 
-    return Array.from({ length: 3 }).map((_, rowIndex) => (
-      <tr
-        key={`skeleton-${rowIndex}`}
-        className="border-b border-gray-200 last:border-0"
-      >
-        {columns.map((_, colIndex) => (
-          <td key={`skeleton-${rowIndex}-${colIndex}`} className="py-3 px-3">
-            <div className="skeleton h-4 w-24 rounded"></div>
-          </td>
-        ))}
-      </tr>
-    ));
+    return Array.from({ length: 3 }).map((_, rowIndex) => {
+      const rowKey = `skeleton-row-${rowIndex}-${Date.now()}`;
+      return (
+        <tr key={rowKey} className="border-b border-gray-200 last:border-0">
+          {columns.map((col, colIndex) => (
+            <td key={`${rowKey}-cell-${col}-${colIndex}`} className="py-3 px-3">
+              <div className="skeleton h-4 w-24 rounded"></div>
+            </td>
+          ))}
+        </tr>
+      );
+    });
   };
 
   // Render actual data rows
   const renderDataRows = () => {
-    return rows.map((row, rowIndex) => (
-      <tr
-        key={`row-${rowIndex}`}
-        className="border-b border-gray-200 last:border-0 hover:bg-indigo-50 transition-colors duration-150"
-      >
-        {columns.map((_, colIndex) => {
-          const cell = row[colIndex];
-          const hasValue = cell !== undefined && cell !== null;
+    return rows.map((row, rowIndex) => {
+      // Create a stable key based on row content
+      const rowKey = `row-${JSON.stringify(row)}-${rowIndex}`;
 
-          return (
-            <td
-              key={`cell-${rowIndex}-${colIndex}`}
-              className="py-3 px-3 text-sm text-gray-800"
-            >
-              {hasValue ? (
-                <span className="animate-fade-in">{cell}</span>
-              ) : (
-                <div className="skeleton h-4 w-20 rounded"></div>
-              )}
-            </td>
-          );
-        })}
-      </tr>
-    ));
+      return (
+        <tr
+          key={rowKey}
+          className="border-b border-gray-200 last:border-0 hover:bg-indigo-50 transition-colors duration-150"
+        >
+          {columns.map((col, colIndex) => (
+            <TableCell
+              key={`${rowKey}-cell-${col}-${colIndex}`}
+              cell={row[colIndex]}
+              rowKey={rowKey}
+              col={col}
+              colIndex={colIndex}
+            />
+          ))}
+        </tr>
+      );
+    });
   };
 
   return (
     <div className={containerClasses}>
       {/* Header section with icon and title */}
       <div className="flex items-center gap-2 mb-3">
-        <div
-          className={[
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
-            isEmpty && "bg-gray-200",
-            hasData && !isComplete && "bg-indigo-100",
-            isComplete && "bg-gradient-to-br from-indigo-400 to-blue-500",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
+        <div className={getIconContainerClasses(isEmpty, hasData, isComplete)}>
           <svg
-            className={[
-              "w-5 h-5 transition-colors duration-300",
-              isEmpty && "text-gray-400",
-              hasData && !isComplete && "text-indigo-600",
-              isComplete && "text-white",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            className={getIconClasses(isEmpty, hasData, isComplete)}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -137,15 +199,7 @@ export default function TableA({ data = {} }) {
             />
           </svg>
         </div>
-        <h3
-          className={[
-            "text-sm font-semibold transition-colors duration-300",
-            isEmpty && "text-gray-500",
-            hasData && "text-indigo-700",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
+        <h3 className={getTitleClasses(isEmpty, hasData)}>
           {isEmpty ? "Loading table..." : "Data Table"}
         </h3>
       </div>
@@ -156,8 +210,8 @@ export default function TableA({ data = {} }) {
           {hasColumns && (
             <thead>
               <tr>
-                {columns.map((col, colIndex) => (
-                  <th key={`header-${colIndex}`} className={headerClasses}>
+                {columns.map((col) => (
+                  <th key={`header-${col}`} className={headerClasses}>
                     {col}
                   </th>
                 ))}
@@ -191,3 +245,11 @@ export default function TableA({ data = {} }) {
     </div>
   );
 }
+
+TableA.propTypes = {
+  data: PropTypes.shape({
+    columns: PropTypes.arrayOf(PropTypes.string),
+    rows: PropTypes.arrayOf(PropTypes.array),
+  }),
+  completeThreshold: PropTypes.number,
+};

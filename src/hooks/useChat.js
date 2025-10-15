@@ -55,22 +55,30 @@ const useChat = () => {
   };
 
   /**
+   * Generate a fast hash for a row array
+   * Uses simple string concatenation with a delimiter to avoid JSON.stringify overhead
+   */
+  const hashRow = (row) => {
+    return row.map((cell) => String(cell ?? "")).join("|");
+  };
+
+  /**
    * Smart merge for component data - handles arrays intelligently
    * For TableA, concatenates rows arrays instead of replacing
    */
   const smartMergeComponentData = (existingData, newData, componentType) => {
     if (componentType === "TableA" && existingData?.rows && newData?.rows) {
       // For TableA, concatenate rows if they're different
+      // Use a Set with hash-based keys for O(1) duplicate detection
+      const existingRowHashes = new Set(existingData.rows.map(hashRow));
       const mergedRows = [...existingData.rows];
 
       // Add new rows that aren't already in the existing rows
       newData.rows.forEach((newRow) => {
-        const isDuplicate = mergedRows.some(
-          (existingRow) =>
-            JSON.stringify(existingRow) === JSON.stringify(newRow)
-        );
-        if (!isDuplicate) {
+        const rowHash = hashRow(newRow);
+        if (!existingRowHashes.has(rowHash)) {
           mergedRows.push(newRow);
+          existingRowHashes.add(rowHash);
         }
       });
 
