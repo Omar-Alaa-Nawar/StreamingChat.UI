@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Calendar, TrendingUp } from "lucide-react";
 
 /**
@@ -10,18 +10,31 @@ import { Calendar, TrendingUp } from "lucide-react";
  *   - data: {
  *       title?: string,
  *       description?: string,
- *       value?: number,
- *       timestamp?: string (ISO format)
+ *       value?: number,        // Legacy field name
+ *       units?: number,        // New field name (Phase 2.1)
+ *       timestamp?: string,    // Legacy field name (ISO format)
+ *       date?: string          // New field name (ISO format, Phase 2.1)
  *     }
  *   - isStreaming: boolean (optional) - indicates if component is still receiving data
  */
 const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
-  const { title, description, value, timestamp } = data;
+  // Support both old and new field names for backwards compatibility
+  const { title, description, value, units, timestamp, date } = data;
+
+  // Use new field names (units, date) if available, otherwise fall back to old names
+  const displayValue = units !== undefined ? units : value;
+  const displayTimestamp = date || timestamp;
+
+  // Debug logging to verify re-renders on data updates
+  useEffect(() => {
+    console.log("[SimpleComponent] ID:", id, "Data update:", data);
+  }, [data, id]);
 
   // Determine rendering state based on available data
   const isEmpty = Object.keys(data).length === 0;
-  const isPartial = !isEmpty && (title === undefined || value === undefined);
-  const isComplete = title !== undefined && value !== undefined;
+  const isPartial =
+    !isEmpty && (title === undefined || displayValue === undefined);
+  const isComplete = title !== undefined && displayValue !== undefined;
 
   console.log("[SimpleComponent] Rendering ID:", id, "State:", {
     isEmpty,
@@ -46,7 +59,7 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
     }
   };
 
-  // Empty state - skeleton loader
+  // Empty state - skeleton loader with informative text
   if (isEmpty) {
     return (
       <div className="my-2 animate-fadeIn">
@@ -60,12 +73,22 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
               </div>
             </div>
 
-            {/* Skeleton description */}
-            <div className="skeleton h-4 w-full rounded mb-3"></div>
+            {/* Skeleton description with placeholder text */}
+            <p className="text-gray-400 text-xs mb-3 leading-relaxed italic">
+              Loading card data...
+            </p>
 
-            {/* Skeleton value */}
+            {/* Skeleton value with informative placeholder */}
             <div className="mb-3 p-3 bg-gray-100 rounded-md border border-gray-200">
-              <div className="skeleton h-8 w-20 rounded"></div>
+              <div className="text-xs text-gray-400 italic">
+                <span className="font-medium">Units</span>
+                <br />
+                <span className="text-[10px]">
+                  ⏱️ [5.0s gap detected at 5.5s]
+                </span>
+                <br />
+                <span>were updated after 5 second delay.</span>
+              </div>
             </div>
 
             {/* Skeleton timestamp */}
@@ -131,10 +154,10 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
                 : "bg-gray-100 border-gray-200"
             }`}
           >
-            {value !== undefined ? (
+            {displayValue !== undefined ? (
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  {value}
+                  {displayValue}
                 </span>
                 <span className="text-xs text-gray-500 font-medium">units</span>
               </div>
@@ -146,8 +169,8 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
           {/* Timestamp footer */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500 pt-2 border-t border-gray-200">
             <Calendar className="w-3 h-3" />
-            {timestamp !== undefined ? (
-              <span>{formatTimestamp(timestamp)}</span>
+            {displayTimestamp !== undefined ? (
+              <span>{formatTimestamp(displayTimestamp)}</span>
             ) : (
               <div className="skeleton h-3 w-24 rounded"></div>
             )}
