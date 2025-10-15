@@ -95,6 +95,25 @@
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
   }
 
+  /* Bar chart shimmer animation (Phase 4) */
+  @keyframes bar-shimmer {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.3;
+    }
+    100% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+
+  .animate-shimmer {
+    animation: bar-shimmer 2s ease-in-out infinite;
+  }
+
   /* Custom scrollbar */
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
