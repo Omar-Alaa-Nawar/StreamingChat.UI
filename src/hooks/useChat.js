@@ -56,11 +56,21 @@ const useChat = () => {
   };
 
   /**
-   * Parse buffer for $$ delimited components
+   * Deep merge helper - ensures new object reference to trigger React re-render
+   * Uses JSON.parse(JSON.stringify()) to create deep clone
+   */
+  const mergeData = (oldData = {}, newData = {}) => {
+    // Deep clone to force new reference and merge nested objects
+    return JSON.parse(JSON.stringify({ ...oldData, ...newData }));
+  };
+
+  /**
+   * Parse buffer for $$$ delimited components (Phase 2)
    * Returns array of content parts: { type: 'text' | 'component', ... }
    * Handles incomplete component JSON during streaming
+   * Merges component updates by ID (progressive rendering)
    */
-  const parseBufferForComponents = (buffer) => {
+  const parseBufferForComponents = (buffer, existingParts = []) => {
     logger.debug(
       "[PARSE]",
       "Buffer length:",
@@ -72,8 +82,19 @@ const useChat = () => {
     const parts = [];
     let lastMatchEnd = 0;
 
-    // Regex to find $$...$$ blocks (double dollar signs - matching backend)
-    const componentRegex = /\$\$(.*?)\$\$/gs;
+    // Track components by ID for merging updates during streaming
+    // Maps component ID -> complete component object { type, componentType, id, data }
+    const componentMap = new Map();
+
+    // Initialize with existing components from previous parse
+    existingParts.forEach((part) => {
+      if (part.type === "component" || part.type === "component-streaming") {
+        componentMap.set(part.id, part);
+      }
+    });
+
+    // Regex to find $$$...$$$  blocks (triple dollar signs - Phase 2 backend)
+    const componentRegex = /\$\$\$(.*?)\$\$\$/gs;
     let match;
 
     // Find all complete component blocks
@@ -102,14 +123,41 @@ const useChat = () => {
         );
 
         // Validate component structure
-        if (componentData.type && componentData.id && componentData.data) {
-          parts.push({
-            type: "component",
-            componentType: componentData.type,
-            id: componentData.id,
-            data: componentData.data,
-          });
-          logger.debug("[PARSE]", "Added complete component");
+        if (
+          componentData.type &&
+          componentData.id &&
+          componentData.data !== undefined
+        ) {
+          const componentId = componentData.id;
+
+          // Check if component already exists (either from previous parse or earlier in buffer)
+          if (componentMap.has(componentId)) {
+            logger.debug("[UPDATE]", "Updating component:", componentId);
+            // Get the existing component
+            const existingComponent = componentMap.get(componentId);
+            // Create new component object with merged data (immutable update)
+            const updatedComponent = {
+              ...existingComponent,
+              data: mergeData(existingComponent.data, componentData.data),
+            };
+            // Update the map with the new reference
+            componentMap.set(componentId, updatedComponent);
+            logger.debug("[MERGE]", "Updated data:", updatedComponent.data);
+          } else {
+            // New component - create and add to map
+            const newComponent = {
+              type: "component",
+              componentType: componentData.type,
+              id: componentId,
+              data: componentData.data,
+            };
+
+            logger.debug("[NEW]", "Adding new component:", componentId);
+            componentMap.set(componentId, newComponent);
+          }
+
+          // Add component to parts (either new or updated from map)
+          parts.push(componentMap.get(componentId));
         } else {
           logger.debug(
             "[PARSE]",
@@ -127,24 +175,24 @@ const useChat = () => {
       lastMatchEnd = match.index + match[0].length;
     }
 
-    // Check for incomplete component (starts with $$ but not closed yet)
-    // We need to find the FIRST $$ after lastMatchEnd that doesn't have a closing $$
+    // Check for incomplete component (starts with $$$ but not closed yet)
+    // We need to find the FIRST $$$ after lastMatchEnd that doesn't have a closing $$$
     const remainingBuffer = buffer.substring(lastMatchEnd);
-    const firstDollarDollar = remainingBuffer.indexOf("$$");
+    const firstTripleDollar = remainingBuffer.indexOf("$$$");
     logger.debug(
       "[PARSE]",
-      "Checking for incomplete component. firstDollarDollar in remaining:",
-      firstDollarDollar,
+      "Checking for incomplete component. firstTripleDollar in remaining:",
+      firstTripleDollar,
       "lastMatchEnd:",
       lastMatchEnd
     );
 
-    if (firstDollarDollar !== -1) {
-      const incompleteStart = lastMatchEnd + firstDollarDollar;
-      // Check if there's a closing $$ after this opening $$
+    if (firstTripleDollar !== -1) {
+      const incompleteStart = lastMatchEnd + firstTripleDollar;
+      // Check if there's a closing $$$ after this opening $$$
       const hasClosing =
-        remainingBuffer.indexOf("$$", firstDollarDollar + 2) !== -1;
-      logger.debug("[PARSE]", "Has closing $$:", hasClosing);
+        remainingBuffer.indexOf("$$$", firstTripleDollar + 3) !== -1;
+      logger.debug("[PARSE]", "Has closing $$$:", hasClosing);
 
       if (!hasClosing) {
         // We have an incomplete component, show text up to $$
@@ -187,7 +235,7 @@ const useChat = () => {
               "Could not parse incomplete JSON yet, showing as text"
             );
             // Not enough JSON yet, show as text
-            parts.push({ type: "text", content: "$$" + incompleteJson });
+            parts.push({ type: "text", content: "$$$" + incompleteJson });
           }
         }
       } else {
@@ -217,6 +265,7 @@ const useChat = () => {
     const reader = readableStream.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let currentParts = []; // Track current parsed parts for merging
 
     try {
       while (true) {
@@ -245,9 +294,12 @@ const useChat = () => {
           chunk.length
         );
 
-        // Parse buffer for components and text
-        const contentParts = parseBufferForComponents(buffer);
+        // Parse buffer for components and text, passing existing parts for merging
+        const contentParts = parseBufferForComponents(buffer, currentParts);
         logger.debug("[STREAM]", "Parsed into", contentParts.length, "parts");
+
+        // Update current parts for next iteration
+        currentParts = contentParts;
 
         // Update the agent message with parsed content
         updateAgentMessage(contentParts);
