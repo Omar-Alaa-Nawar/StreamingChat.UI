@@ -55,6 +55,15 @@ const useChat = () => {
   };
 
   /**
+   * Deep merge helper - ensures new object reference to trigger React re-render
+   * Uses JSON.parse(JSON.stringify()) to create deep clone
+   */
+  const mergeData = (oldData = {}, newData = {}) => {
+    // Deep clone to force new reference and merge nested objects
+    return JSON.parse(JSON.stringify({ ...oldData, ...newData }));
+  };
+
+  /**
    * Parse buffer for $$$ delimited components (Phase 2)
    * Returns array of content parts: { type: 'text' | 'component', ... }
    * Handles incomplete component JSON during streaming
@@ -119,11 +128,12 @@ const useChat = () => {
             console.log("[UPDATE] Updating component in buffer:", componentId);
             // Get the existing component from our buffer parse
             const existingInBuffer = seenInBuffer.get(componentId);
-            // Merge with new data
-            existingInBuffer.data = {
-              ...existingInBuffer.data,
-              ...componentData.data,
-            };
+            // Deep merge with new data to ensure new object reference
+            existingInBuffer.data = mergeData(
+              existingInBuffer.data,
+              componentData.data
+            );
+            console.log("[MERGE] Updated data:", existingInBuffer.data);
           } else {
             // First time seeing this component in current buffer
             const existingData = existingComponentData.get(componentId);
@@ -133,14 +143,20 @@ const useChat = () => {
               componentType: componentData.type,
               id: componentId,
               data: existingData
-                ? { ...existingData, ...componentData.data }
+                ? mergeData(existingData, componentData.data)
                 : componentData.data,
             };
 
             if (existingData) {
               console.log(
                 "[MERGE] Merging with existing component:",
-                componentId
+                componentId,
+                "Old data:",
+                existingData,
+                "New data:",
+                componentData.data,
+                "Merged:",
+                newComponent.data
               );
             } else {
               console.log("[NEW] Adding new component:", componentId);
