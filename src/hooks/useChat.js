@@ -70,7 +70,7 @@ const useChat = () => {
    * Handles incomplete component JSON during streaming
    * Merges component updates by ID (progressive rendering)
    */
-  const parseBufferForComponents = (buffer) => {
+  const parseBufferForComponents = (buffer, existingParts = []) => {
     logger.debug(
       "[PARSE]",
       "Buffer length:",
