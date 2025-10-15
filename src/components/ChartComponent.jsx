@@ -41,18 +41,20 @@ const ChartComponent = ({ data }) => {
   const isComplete = hasData && dataPoints.length >= expectedDataPoints;
   const isPartial = hasData && !isComplete;
 
-  // Debug logging
-  console.log("ChartComponent render:", {
-    rawData: data,
-    chartType,
-    title,
-    labels,
-    datasets,
-    dataPoints,
-    isEmpty,
-    isPartial,
-    isComplete,
-  });
+  // Debug logging (only in development)
+  if (process.env.NODE_ENV === "development") {
+    console.log("ChartComponent render:", {
+      rawData: data,
+      chartType,
+      title,
+      labels,
+      datasets,
+      dataPoints,
+      isEmpty,
+      isPartial,
+      isComplete,
+    });
+  }
 
   // Render skeleton for empty state
   const renderSkeleton = () => (
