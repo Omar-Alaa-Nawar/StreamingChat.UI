@@ -1,7 +1,8 @@
-import { useRef } from 'react';
-import useChatStore from '../stores/chat-store';
+import { useRef } from "react";
+import useChatStore from "../stores/chat-store";
+import logger from "../utils/logger";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8001';
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8001";
 
 const useChat = () => {
   const abortControllerRef = useRef(null);
@@ -10,7 +11,7 @@ const useChat = () => {
     addUserMessage,
     startAgentMessage,
     updateAgentMessage,
-    setIsStreaming
+    setIsStreaming,
   } = useChatStore();
 
   const stopStreaming = () => {
@@ -27,9 +28,9 @@ const useChat = () => {
       abortControllerRef.current = new AbortController();
 
       const response = await fetch(`${BASE_URL}/chat`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ message: userInput }),
         signal: abortControllerRef.current.signal,
@@ -42,10 +43,10 @@ const useChat = () => {
       await processStream(response.body);
     } catch (error) {
       // Don't show error for user-initiated abort
-      if (error.name === 'AbortError') {
-        console.log('Stream stopped by user');
+      if (error.name === "AbortError") {
+        logger.info("[STREAM]", "Stream stopped by user");
       } else {
-        console.error('Error fetching chat stream:', error);
+        logger.error("[STREAM]", "Error fetching chat stream:", error);
         // You could update the store with an error message here
       }
     } finally {
@@ -60,7 +61,13 @@ const useChat = () => {
    * Handles incomplete component JSON during streaming
    */
   const parseBufferForComponents = (buffer) => {
-    console.log('[PARSE] Buffer length:', buffer.length, 'First 100 chars:', buffer.substring(0, 100));
+    logger.debug(
+      "[PARSE]",
+      "Buffer length:",
+      buffer.length,
+      "First 100 chars:",
+      buffer.substring(0, 100)
+    );
 
     const parts = [];
     let lastMatchEnd = 0;
@@ -71,38 +78,50 @@ const useChat = () => {
 
     // Find all complete component blocks
     while ((match = componentRegex.exec(buffer)) !== null) {
-      console.log('[PARSE] Found complete component at index:', match.index);
+      logger.debug(
+        "[PARSE]",
+        "Found complete component at index:",
+        match.index
+      );
       // Add text before component (if any)
       if (match.index > lastMatchEnd) {
         const textContent = buffer.substring(lastMatchEnd, match.index);
         if (textContent) {
-          parts.push({ type: 'text', content: textContent });
+          parts.push({ type: "text", content: textContent });
         }
       }
 
       // Try to parse component JSON
       try {
         const componentData = JSON.parse(match[1]);
-        console.log('[PARSE] Parsed component:', componentData.type, componentData.id);
+        logger.debug(
+          "[PARSE]",
+          "Parsed component:",
+          componentData.type,
+          componentData.id
+        );
 
         // Validate component structure
         if (componentData.type && componentData.id && componentData.data) {
           parts.push({
-            type: 'component',
+            type: "component",
             componentType: componentData.type,
             id: componentData.id,
             data: componentData.data,
           });
-          console.log('[PARSE] Added complete component');
+          logger.debug("[PARSE]", "Added complete component");
         } else {
-          console.log('[PARSE] Invalid component structure, treating as text');
+          logger.debug(
+            "[PARSE]",
+            "Invalid component structure, treating as text"
+          );
           // Invalid structure, treat as text
-          parts.push({ type: 'text', content: match[0] });
+          parts.push({ type: "text", content: match[0] });
         }
       } catch (e) {
-        console.log('[PARSE] JSON parse failed:', e.message);
+        logger.debug("[PARSE]", "JSON parse failed:", e.message);
         // JSON parse failed, treat as text
-        parts.push({ type: 'text', content: match[0] });
+        parts.push({ type: "text", content: match[0] });
       }
 
       lastMatchEnd = match.index + match[0].length;
@@ -111,46 +130,64 @@ const useChat = () => {
     // Check for incomplete component (starts with $$ but not closed yet)
     // We need to find the FIRST $$ after lastMatchEnd that doesn't have a closing $$
     const remainingBuffer = buffer.substring(lastMatchEnd);
-    const firstDollarDollar = remainingBuffer.indexOf('$$');
-    console.log('[PARSE] Checking for incomplete component. firstDollarDollar in remaining:', firstDollarDollar, 'lastMatchEnd:', lastMatchEnd);
+    const firstDollarDollar = remainingBuffer.indexOf("$$");
+    logger.debug(
+      "[PARSE]",
+      "Checking for incomplete component. firstDollarDollar in remaining:",
+      firstDollarDollar,
+      "lastMatchEnd:",
+      lastMatchEnd
+    );
 
     if (firstDollarDollar !== -1) {
       const incompleteStart = lastMatchEnd + firstDollarDollar;
       // Check if there's a closing $$ after this opening $$
-      const hasClosing = remainingBuffer.indexOf('$$', firstDollarDollar + 2) !== -1;
-      console.log('[PARSE] Has closing $$:', hasClosing);
+      const hasClosing =
+        remainingBuffer.indexOf("$$", firstDollarDollar + 2) !== -1;
+      logger.debug("[PARSE]", "Has closing $$:", hasClosing);
 
       if (!hasClosing) {
         // We have an incomplete component, show text up to $$
         if (incompleteStart > lastMatchEnd) {
           const textContent = buffer.substring(lastMatchEnd, incompleteStart);
           if (textContent) {
-            parts.push({ type: 'text', content: textContent });
-            console.log('[PARSE] Added text before incomplete component');
+            parts.push({ type: "text", content: textContent });
+            logger.debug("[PARSE]", "Added text before incomplete component");
           }
         }
 
         // Try to parse incomplete JSON as streaming component
         const incompleteJson = buffer.substring(incompleteStart + 2);
-        console.log('[PARSE] Incomplete JSON:', incompleteJson.substring(0, 50));
+        logger.debug(
+          "[PARSE]",
+          "Incomplete JSON:",
+          incompleteJson.substring(0, 50)
+        );
 
         if (incompleteJson.trim()) {
           try {
             const partialData = JSON.parse(incompleteJson + '}"}');
-            console.log('[PARSE] Streaming component with partial data:', partialData);
+            logger.debug(
+              "[PARSE]",
+              "Streaming component with partial data:",
+              partialData
+            );
             // We have some parseable data, show as streaming component
             parts.push({
-              type: 'component-streaming',
-              componentType: partialData.type || 'SimpleComponent',
-              id: partialData.id || 'streaming',
+              type: "component-streaming",
+              componentType: partialData.type || "SimpleComponent",
+              id: partialData.id || "streaming",
               data: partialData.data || {},
               rawJson: incompleteJson,
             });
-            console.log('[PARSE] Added streaming component');
+            logger.debug("[PARSE]", "Added streaming component");
           } catch (e) {
-            console.log('[PARSE] Could not parse incomplete JSON yet, showing as text');
+            logger.debug(
+              "[PARSE]",
+              "Could not parse incomplete JSON yet, showing as text"
+            );
             // Not enough JSON yet, show as text
-            parts.push({ type: 'text', content: '$$' + incompleteJson });
+            parts.push({ type: "text", content: "$$" + incompleteJson });
           }
         }
       } else {
@@ -158,7 +195,7 @@ const useChat = () => {
         if (lastMatchEnd < buffer.length) {
           const textContent = buffer.substring(lastMatchEnd);
           if (textContent) {
-            parts.push({ type: 'text', content: textContent });
+            parts.push({ type: "text", content: textContent });
           }
         }
       }
@@ -167,44 +204,56 @@ const useChat = () => {
       if (lastMatchEnd < buffer.length) {
         const textContent = buffer.substring(lastMatchEnd);
         if (textContent) {
-          parts.push({ type: 'text', content: textContent });
+          parts.push({ type: "text", content: textContent });
         }
       }
     }
 
-    console.log('[PARSE] Returning', parts.length, 'parts');
+    logger.debug("[PARSE]", "Returning", parts.length, "parts");
     return parts;
   };
 
   const processStream = async (readableStream) => {
     const reader = readableStream.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    let buffer = "";
 
     try {
       while (true) {
         const { done, value } = await reader.read();
 
         if (done) {
-          console.log('[STREAM] Stream complete');
+          logger.debug("[STREAM]", "Stream complete");
           break;
         }
 
         // Decode the chunk and add to buffer
         const chunk = decoder.decode(value, { stream: true });
-        console.log('[STREAM] Raw chunk size:', value.length, 'Decoded chunk:', chunk);
+        logger.debug(
+          "[STREAM]",
+          "Raw chunk size:",
+          value.length,
+          "Decoded chunk:",
+          chunk
+        );
         buffer += chunk;
-        console.log('[STREAM] Received chunk, buffer length:', buffer.length, 'New chars:', chunk.length);
+        logger.debug(
+          "[STREAM]",
+          "Received chunk, buffer length:",
+          buffer.length,
+          "New chars:",
+          chunk.length
+        );
 
         // Parse buffer for components and text
         const contentParts = parseBufferForComponents(buffer);
-        console.log('[STREAM] Parsed into', contentParts.length, 'parts');
+        logger.debug("[STREAM]", "Parsed into", contentParts.length, "parts");
 
         // Update the agent message with parsed content
         updateAgentMessage(contentParts);
       }
     } catch (error) {
-      console.error('[STREAM] Error:', error);
+      logger.error("[STREAM]", "Error:", error);
       // Re-throw to be caught by fetchChatStream
       throw error;
     } finally {
