@@ -55,6 +55,49 @@ const useChat = () => {
   };
 
   /**
+   * Smart merge for component data - handles arrays intelligently
+   * For TableA, concatenates rows arrays instead of replacing
+   */
+  const smartMergeComponentData = (existingData, newData, componentType) => {
+    if (componentType === "TableA" && existingData?.rows && newData?.rows) {
+      // For TableA, concatenate rows if they're different
+      const mergedRows = [...existingData.rows];
+
+      // Add new rows that aren't already in the existing rows
+      newData.rows.forEach((newRow) => {
+        const isDuplicate = mergedRows.some(
+          (existingRow) =>
+            JSON.stringify(existingRow) === JSON.stringify(newRow)
+        );
+        if (!isDuplicate) {
+          mergedRows.push(newRow);
+        }
+      });
+
+      console.log(
+        "[SMART MERGE] TableA rows:",
+        "existing:",
+        existingData.rows.length,
+        "new:",
+        newData.rows.length,
+        "merged:",
+        mergedRows.length,
+        "merged data:",
+        mergedRows
+      );
+
+      return {
+        ...existingData,
+        ...newData,
+        rows: mergedRows,
+      };
+    }
+
+    // Default: simple spread merge
+    return { ...existingData, ...newData };
+  };
+
+  /**
    * Parse buffer for $$$ delimited components (Phase 2)
    * Returns array of content parts: { type: 'text' | 'component', ... }
    * Handles incomplete component JSON during streaming
@@ -119,11 +162,12 @@ const useChat = () => {
             console.log("[UPDATE] Updating component in buffer:", componentId);
             // Get the existing component from our buffer parse
             const existingInBuffer = seenInBuffer.get(componentId);
-            // Merge with new data
-            existingInBuffer.data = {
-              ...existingInBuffer.data,
-              ...componentData.data,
-            };
+            // Merge with new data using smart merge
+            existingInBuffer.data = smartMergeComponentData(
+              existingInBuffer.data,
+              componentData.data,
+              componentData.type
+            );
           } else {
             // First time seeing this component in current buffer
             const existingData = existingComponentData.get(componentId);
@@ -133,7 +177,11 @@ const useChat = () => {
               componentType: componentData.type,
               id: componentId,
               data: existingData
-                ? { ...existingData, ...componentData.data }
+                ? smartMergeComponentData(
+                    existingData,
+                    componentData.data,
+                    componentData.type
+                  )
                 : componentData.data,
             };
 
