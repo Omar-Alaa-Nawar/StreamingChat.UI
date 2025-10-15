@@ -188,7 +188,13 @@ const useChat = () => {
             if (existingData) {
               console.log(
                 "[MERGE] Merging with existing component:",
-                componentId
+                componentId,
+                "Old data:",
+                existingData,
+                "New data:",
+                componentData.data,
+                "Merged:",
+                newComponent.data
               );
             } else {
               console.log("[NEW] Adding new component:", componentId);
