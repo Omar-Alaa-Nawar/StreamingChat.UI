@@ -1,43 +1,65 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { useTheme } from "../context/ThemeContext";
 
 /**
- * Helper function to determine container CSS classes based on table state
+ * Helper function to determine container CSS classes based on table state and theme
  */
-const getContainerClasses = (isEmpty, hasData, isComplete) => {
+const getContainerClasses = (isEmpty, hasData, isComplete, theme) => {
+  const isDark = theme === "dark";
+
   return [
     "border rounded-2xl p-4 transition-all duration-300",
-    isEmpty && "border-gray-300 bg-gray-50",
-    hasData && !isComplete && "border-indigo-400 bg-white",
+    isEmpty &&
+      (isDark ? "border-gray-700 bg-gray-800" : "border-gray-300 bg-gray-50"),
+    hasData &&
+      !isComplete &&
+      (isDark ? "border-indigo-600 bg-gray-900" : "border-indigo-400 bg-white"),
     isComplete &&
-      "border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-md",
+      (isDark
+        ? "border-indigo-500 bg-gradient-to-br from-indigo-950/30 to-blue-950/30 shadow-lg"
+        : "border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-md"),
   ]
     .filter(Boolean)
     .join(" ");
 };
 
 /**
- * Helper function to determine header CSS classes based on table state
+ * Helper function to determine header CSS classes based on table state and theme
  */
-const getHeaderClasses = (isEmpty, hasData, isComplete) => {
+const getHeaderClasses = (isEmpty, hasData, isComplete, theme) => {
+  const isDark = theme === "dark";
+
   return [
     "text-left text-sm font-semibold py-2 px-3 border-b-2",
-    isEmpty && "text-gray-400 border-gray-300",
-    hasData && !isComplete && "text-indigo-700 border-indigo-300",
-    isComplete && "text-indigo-800 border-indigo-400",
+    isEmpty &&
+      (isDark
+        ? "text-gray-500 border-gray-700"
+        : "text-gray-400 border-gray-300"),
+    hasData &&
+      !isComplete &&
+      (isDark
+        ? "text-indigo-400 border-indigo-700"
+        : "text-indigo-700 border-indigo-300"),
+    isComplete &&
+      (isDark
+        ? "text-indigo-300 border-indigo-600"
+        : "text-indigo-800 border-indigo-400"),
   ]
     .filter(Boolean)
     .join(" ");
 };
 
 /**
- * Helper function to determine icon CSS classes based on table state
+ * Helper function to determine icon CSS classes based on table state and theme
  */
-const getIconContainerClasses = (isEmpty, hasData, isComplete) => {
+const getIconContainerClasses = (isEmpty, hasData, isComplete, theme) => {
+  const isDark = theme === "dark";
+
   return [
     "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
-    isEmpty && "bg-gray-200",
-    hasData && !isComplete && "bg-indigo-100",
+    isEmpty && (isDark ? "bg-gray-700" : "bg-gray-200"),
+    hasData && !isComplete && (isDark ? "bg-indigo-900/50" : "bg-indigo-100"),
     isComplete && "bg-gradient-to-br from-indigo-400 to-blue-500",
   ]
     .filter(Boolean)
@@ -45,13 +67,15 @@ const getIconContainerClasses = (isEmpty, hasData, isComplete) => {
 };
 
 /**
- * Helper function to determine icon SVG CSS classes based on table state
+ * Helper function to determine icon SVG CSS classes based on table state and theme
  */
-const getIconClasses = (isEmpty, hasData, isComplete) => {
+const getIconClasses = (isEmpty, hasData, isComplete, theme) => {
+  const isDark = theme === "dark";
+
   return [
     "w-5 h-5 transition-colors duration-300",
-    isEmpty && "text-gray-400",
-    hasData && !isComplete && "text-indigo-600",
+    isEmpty && (isDark ? "text-gray-500" : "text-gray-400"),
+    hasData && !isComplete && (isDark ? "text-indigo-400" : "text-indigo-600"),
     isComplete && "text-white",
   ]
     .filter(Boolean)
@@ -59,13 +83,15 @@ const getIconClasses = (isEmpty, hasData, isComplete) => {
 };
 
 /**
- * Helper function to determine title CSS classes based on table state
+ * Helper function to determine title CSS classes based on table state and theme
  */
-const getTitleClasses = (isEmpty, hasData) => {
+const getTitleClasses = (isEmpty, hasData, theme) => {
+  const isDark = theme === "dark";
+
   return [
     "text-sm font-semibold transition-colors duration-300",
-    isEmpty && "text-gray-500",
-    hasData && "text-indigo-700",
+    isEmpty && (isDark ? "text-gray-400" : "text-gray-500"),
+    hasData && (isDark ? "text-indigo-300" : "text-indigo-700"),
   ]
     .filter(Boolean)
     .join(" ");
@@ -74,13 +100,16 @@ const getTitleClasses = (isEmpty, hasData) => {
 /**
  * Component to render a single table cell with skeleton fallback
  */
-const TableCell = ({ cell, rowKey, col, colIndex }) => {
+const TableCell = ({ cell, rowKey, col, colIndex, theme }) => {
   const hasValue = cell !== undefined && cell !== null;
+  const isDark = theme === "dark";
 
   return (
     <td
       key={`${rowKey}-cell-${col}-${colIndex}`}
-      className="py-3 px-3 text-sm text-gray-800"
+      className={`py-3 px-3 text-sm ${
+        isDark ? "text-gray-200" : "text-gray-800"
+      }`}
     >
       {hasValue ? (
         <span className="animate-fade-in">{cell}</span>
@@ -96,10 +125,11 @@ TableCell.propTypes = {
   rowKey: PropTypes.string.isRequired,
   col: PropTypes.string.isRequired,
   colIndex: PropTypes.number.isRequired,
+  theme: PropTypes.string.isRequired,
 };
 
 /**
- * TableA Component - Progressive Table Renderer
+ * TableA Component - Progressive Table Renderer (Phase 6.4: Theme-Aware)
  *
  * Supports three rendering states:
  * 1. Empty: No rows → Display skeleton placeholder rows
@@ -110,6 +140,7 @@ TableCell.propTypes = {
  * - Backend streams rows incrementally via ID-based merging
  * - Each new row replaces a skeleton placeholder
  * - Smooth transitions between states
+ * - Theme-aware colors for dark and light modes
  *
  * @param {Object} props - Component props
  * @param {Object} props.data - Table data
@@ -118,7 +149,9 @@ TableCell.propTypes = {
  * @param {number} props.completeThreshold - Minimum number of rows to consider the table complete (default: 3)
  */
 export default function TableA({ data = {}, completeThreshold = 3 }) {
+  const { theme } = useTheme();
   const { columns = [], rows = [] } = data;
+  const isDark = theme === "dark";
 
   // Debug logging
   console.log("[TableA] Rendering with data:", {
@@ -133,9 +166,14 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
   const hasData = rows.length > 0;
   const isComplete = hasData && rows.length >= completeThreshold;
 
-  // Determine CSS classes based on state
-  const containerClasses = getContainerClasses(isEmpty, hasData, isComplete);
-  const headerClasses = getHeaderClasses(isEmpty, hasData, isComplete);
+  // Determine CSS classes based on state and theme
+  const containerClasses = getContainerClasses(
+    isEmpty,
+    hasData,
+    isComplete,
+    theme
+  );
+  const headerClasses = getHeaderClasses(isEmpty, hasData, isComplete, theme);
 
   // Render skeleton rows when empty
   const renderSkeletonRows = () => {
@@ -144,7 +182,12 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
     return Array.from({ length: 3 }).map((_, rowIndex) => {
       const rowKey = `skeleton-row-${rowIndex}-${Date.now()}`;
       return (
-        <tr key={rowKey} className="border-b border-gray-200 last:border-0">
+        <tr
+          key={rowKey}
+          className={`border-b last:border-0 ${
+            isDark ? "border-gray-700" : "border-gray-200"
+          }`}
+        >
           {columns.map((col, colIndex) => (
             <td key={`${rowKey}-cell-${col}-${colIndex}`} className="py-3 px-3">
               <div className="skeleton h-4 w-24 rounded"></div>
@@ -158,13 +201,25 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
   // Render actual data rows
   const renderDataRows = () => {
     return rows.map((row, rowIndex) => {
-      // Create a stable key based on row content
-      const rowKey = `row-${JSON.stringify(row)}-${rowIndex}`;
+      // Create a stable key using first column value or fallback to index
+      const rowKey = row[0] !== undefined ? `row-${row[0]}-${rowIndex}` : `row-${rowIndex}`;
+
+      // Alternating row colors based on theme
+      const rowBg = isDark
+        ? rowIndex % 2 === 0
+          ? "bg-[var(--color-table-row)]"
+          : "bg-[var(--color-table-row-alt)]"
+        : rowIndex % 2 === 0
+        ? "bg-white"
+        : "bg-gray-50";
+      const hoverBg = isDark ? "hover:bg-indigo-900/30" : "hover:bg-indigo-50";
 
       return (
         <tr
           key={rowKey}
-          className="border-b border-gray-200 last:border-0 hover:bg-indigo-50 transition-colors duration-150"
+          className={`border-b last:border-0 ${
+            isDark ? "border-gray-700" : "border-gray-200"
+          } ${rowBg} ${hoverBg} transition-colors duration-150`}
         >
           {columns.map((col, colIndex) => (
             <TableCell
@@ -173,6 +228,7 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
               rowKey={rowKey}
               col={col}
               colIndex={colIndex}
+              theme={theme}
             />
           ))}
         </tr>
@@ -184,9 +240,16 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
     <div className={containerClasses}>
       {/* Header section with icon and title */}
       <div className="flex items-center gap-2 mb-3">
-        <div className={getIconContainerClasses(isEmpty, hasData, isComplete)}>
+        <div
+          className={getIconContainerClasses(
+            isEmpty,
+            hasData,
+            isComplete,
+            theme
+          )}
+        >
           <svg
-            className={getIconClasses(isEmpty, hasData, isComplete)}
+            className={getIconClasses(isEmpty, hasData, isComplete, theme)}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -199,7 +262,7 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
             />
           </svg>
         </div>
-        <h3 className={getTitleClasses(isEmpty, hasData)}>
+        <h3 className={getTitleClasses(isEmpty, hasData, theme)}>
           {isEmpty ? "Loading table..." : "Data Table"}
         </h3>
       </div>
@@ -224,12 +287,22 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
 
       {/* Footer with row count (only when data exists) */}
       {hasData && (
-        <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500 flex items-center justify-between">
+        <div
+          className={`mt-3 pt-3 border-t text-xs flex items-center justify-between ${
+            isDark
+              ? "border-gray-700 text-gray-400"
+              : "border-gray-200 text-gray-500"
+          }`}
+        >
           <span>
             {rows.length} {rows.length === 1 ? "row" : "rows"}
           </span>
           {isComplete && (
-            <span className="text-indigo-600 font-medium flex items-center gap-1">
+            <span
+              className={`font-medium flex items-center gap-1 ${
+                isDark ? "text-indigo-400" : "text-indigo-600"
+              }`}
+            >
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"

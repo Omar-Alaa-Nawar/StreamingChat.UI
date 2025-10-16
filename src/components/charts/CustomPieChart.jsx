@@ -1,13 +1,23 @@
 import React from "react";
 
-const CustomPieChart = ({ labels, data, title, colors }) => {
+const CustomPieChart = ({ labels, data, title, colors, theme = "light" }) => {
   if (!data || data.length === 0) return null;
 
+  const isDark = theme === "dark";
   const total = data.reduce((sum, val) => sum + val, 0);
   const centerX = 50;
   const centerY = 50;
   const radius = 35;
   const innerRadius = 20; // Donut style
+
+  // Theme-aware colors
+  const titleColor = isDark ? "text-gray-400" : "text-gray-600";
+  const labelColor = isDark ? "text-gray-300" : "text-gray-700";
+  const valueColor = isDark ? "text-gray-400" : "text-gray-500";
+  const totalColor = isDark ? "fill-gray-200" : "fill-gray-800";
+  const totalLabelColor = isDark ? "fill-gray-400" : "fill-gray-500";
+  const centerGradientStart = isDark ? "#1e293b" : "#f9fafb";
+  const centerGradientEnd = isDark ? "#0f172a" : "#ffffff";
 
   // Default colors if not provided
   const defaultColors = [
@@ -69,7 +79,9 @@ const CustomPieChart = ({ labels, data, title, colors }) => {
     <div className="w-full h-64 relative flex items-center justify-center">
       {/* Chart Title */}
       {title && (
-        <div className="absolute top-0 left-0 right-0 text-xs font-medium text-gray-600 text-center">
+        <div
+          className={`absolute top-0 left-0 right-0 text-xs font-medium ${titleColor} text-center`}
+        >
           {title}
         </div>
       )}
@@ -89,7 +101,9 @@ const CustomPieChart = ({ labels, data, title, colors }) => {
                   fill={segment.color}
                   className="transition-all duration-300 group-hover:opacity-80"
                   style={{
-                    filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))",
+                    filter: `drop-shadow(0 2px 4px ${
+                      isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+                    })`,
                   }}
                 />
                 {/* Hover effect - slightly enlarge */}
@@ -105,8 +119,8 @@ const CustomPieChart = ({ labels, data, title, colors }) => {
             {/* Center Circle (donut hole) with gradient */}
             <defs>
               <radialGradient id="centerGradient">
-                <stop offset="0%" stopColor="#f9fafb" />
-                <stop offset="100%" stopColor="#ffffff" />
+                <stop offset="0%" stopColor={centerGradientStart} />
+                <stop offset="100%" stopColor={centerGradientEnd} />
               </radialGradient>
             </defs>
             <circle
@@ -115,7 +129,9 @@ const CustomPieChart = ({ labels, data, title, colors }) => {
               r={innerRadius}
               fill="url(#centerGradient)"
               style={{
-                filter: "drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))",
+                filter: `drop-shadow(0 1px 3px ${
+                  isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+                })`,
               }}
             />
 
@@ -124,7 +140,7 @@ const CustomPieChart = ({ labels, data, title, colors }) => {
               x={centerX}
               y={centerY - 2}
               textAnchor="middle"
-              className="text-[8px] font-bold fill-gray-800"
+              className={`text-[8px] font-bold ${totalColor}`}
             >
               {total.toLocaleString()}
             </text>
@@ -132,7 +148,7 @@ const CustomPieChart = ({ labels, data, title, colors }) => {
               x={centerX}
               y={centerY + 6}
               textAnchor="middle"
-              className="text-[4px] fill-gray-500"
+              className={`text-[4px] ${totalLabelColor}`}
             >
               Total
             </text>
@@ -157,10 +173,10 @@ const CustomPieChart = ({ labels, data, title, colors }) => {
 
               {/* Label and value */}
               <div className="flex flex-col">
-                <span className="text-xs font-medium text-gray-700">
+                <span className={`text-xs font-medium ${labelColor}`}>
                   {segment.label}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className={`text-xs ${valueColor}`}>
                   {segment.value.toLocaleString()} (
                   {segment.percentage.toFixed(1)}%)
                 </span>
