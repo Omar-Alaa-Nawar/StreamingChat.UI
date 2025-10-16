@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { AnimatePresence } from "framer-motion";
 import Message from "./Message";
 import TypingIndicator from "./TypingIndicator"; // Phase 5
 import useChatStore from "../stores/chat-store";
@@ -91,23 +92,28 @@ const MessageList = () => {
             ))}
 
             {/* Phase 5: Show typing indicator while waiting for first stream chunk */}
-            {isWaiting && (
-              <div className="flex justify-start mb-4 animate-fadeIn">
-                <div className="flex gap-3 max-w-[80%]">
-                  {/* Avatar - same as assistant messages */}
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-600 shadow-md">
-                    <Bot className="w-5 h-5 text-white" />
-                  </div>
+            <AnimatePresence mode="wait">
+              {isWaiting && (
+                <div
+                  key="typing-indicator"
+                  className="flex justify-start mb-4 animate-fadeIn"
+                >
+                  <div className="flex gap-3 max-w-[80%]">
+                    {/* Avatar - same as assistant messages */}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-600 shadow-md">
+                      <Bot className="w-5 h-5 text-white" />
+                    </div>
 
-                  {/* Typing indicator bubble */}
-                  <div className="flex flex-col">
-                    <div className="px-4 py-3 rounded-2xl shadow-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-tl-sm">
-                      <TypingIndicator />
+                    {/* Typing indicator bubble */}
+                    <div className="flex flex-col">
+                      <div className="px-4 py-3 rounded-2xl shadow-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-tl-sm">
+                        <TypingIndicator />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </AnimatePresence>
           </div>
         )}
         <div ref={messagesEndRef} />

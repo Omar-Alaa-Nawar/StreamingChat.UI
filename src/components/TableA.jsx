@@ -201,8 +201,8 @@ export default function TableA({ data = {}, completeThreshold = 3 }) {
   // Render actual data rows
   const renderDataRows = () => {
     return rows.map((row, rowIndex) => {
-      // Create a stable key based on row content
-      const rowKey = `row-${JSON.stringify(row)}-${rowIndex}`;
+      // Create a stable key using first column value or fallback to index
+      const rowKey = row[0] !== undefined ? `row-${row[0]}-${rowIndex}` : `row-${rowIndex}`;
 
       // Alternating row colors based on theme
       const rowBg = isDark

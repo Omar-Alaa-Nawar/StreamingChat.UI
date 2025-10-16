@@ -19,23 +19,21 @@ import { createContext, useContext, useState, useEffect } from "react";
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  // Initialize theme from localStorage or default to light
+  // Initialize theme from localStorage or respect OS preference
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("streamforge-theme");
     if (saved) return saved;
-    // Default to light theme
-    return "light";
+    // Respect OS preference on first load
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return prefersDark ? "dark" : "light";
   });
 
   // Apply theme class to document and persist to localStorage
   useEffect(() => {
     const root = document.documentElement;
 
-    // Remove both classes first to ensure clean state
-    root.classList.remove("light", "dark");
-
-    // Add the active theme class
-    root.classList.add(theme);
+    // Only toggle 'dark' class; 'light' is default and needs no class
+    root.classList.toggle("dark", theme === "dark");
 
     // Persist to localStorage
     localStorage.setItem("streamforge-theme", theme);

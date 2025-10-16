@@ -44,6 +44,9 @@ const Tooltip = ({ text, show, position = "top" }) => {
     right: "left-full ml-2 top-1/2 -translate-y-1/2",
   };
 
+  // Fallback to "top" if invalid position is provided
+  const posClass = positionClasses[position] || positionClasses.top;
+
   const bgColor =
     theme === "dark"
       ? "bg-slate-800 text-gray-100 shadow-lg shadow-indigo-900/20 border border-slate-700"
@@ -59,7 +62,7 @@ const Tooltip = ({ text, show, position = "top" }) => {
           transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className={`absolute z-50 px-3 py-1.5 text-sm rounded-lg whitespace-nowrap
             transition-colors duration-500 ease-in-out tooltip
-            ${bgColor} ${positionClasses[position]}`}
+            ${bgColor} ${posClass}`}
         >
           {text}
         </motion.div>

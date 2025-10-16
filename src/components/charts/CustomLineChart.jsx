@@ -8,9 +8,10 @@ const CustomLineChart = ({
   color = "#6366f1",
   theme: themeProp, // Keep prop for backwards compatibility
 }) => {
-  // Use theme from context directly for real-time updates
+  // Use theme from context, fallback to prop for backwards compatibility
   const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const activeTheme = themeProp || theme;
+  const isDark = activeTheme === "dark";
 
   // Check data after hooks are called
   if (!data || data.length === 0) return null;
