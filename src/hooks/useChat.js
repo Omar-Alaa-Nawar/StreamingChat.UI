@@ -11,6 +11,7 @@ const useChat = () => {
     startAgentMessage,
     updateAgentMessage,
     setIsStreaming,
+    setIsWaiting, // Phase 5: Typing indicator state
   } = useChatStore();
 
   const stopStreaming = () => {
@@ -19,10 +20,14 @@ const useChat = () => {
       abortControllerRef.current = null;
     }
     setIsStreaming(false);
+    setIsWaiting(false); // Phase 5: Clear waiting state when stopped
   };
 
   const fetchChatStream = async (userInput) => {
     try {
+      // Phase 5: Show typing indicator immediately
+      setIsWaiting(true);
+
       // Create new AbortController for this request
       abortControllerRef.current = new AbortController();
 
@@ -50,6 +55,7 @@ const useChat = () => {
       }
     } finally {
       setIsStreaming(false);
+      setIsWaiting(false); // Phase 5: Clear waiting state when done
       abortControllerRef.current = null;
     }
   };
@@ -312,6 +318,7 @@ const useChat = () => {
     const decoder = new TextDecoder();
     let buffer = "";
     let currentParts = []; // Track current parsed parts for merging
+    let isFirstChunk = true; // Phase 5: Track first chunk to hide typing indicator
 
     try {
       while (true) {
@@ -320,6 +327,14 @@ const useChat = () => {
         if (done) {
           console.log("[STREAM] Stream complete");
           break;
+        }
+
+        // Phase 5: Hide typing indicator and create agent message on first chunk
+        if (isFirstChunk) {
+          setIsWaiting(false);
+          startAgentMessage(); // Create the agent message now
+          isFirstChunk = false;
+          console.log("[STREAM] First chunk received - hiding typing indicator and creating message");
         }
 
         // Decode the chunk and add to buffer
@@ -366,8 +381,8 @@ const useChat = () => {
     // Start streaming
     setIsStreaming(true);
 
-    // Create empty agent message
-    startAgentMessage();
+    // Phase 5: Don't create empty message - let typing indicator show instead
+    // startAgentMessage() will be called when first chunk arrives
 
     // Fetch and process stream
     await fetchChatStream(userInput);

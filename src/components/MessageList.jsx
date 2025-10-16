@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import Message from './Message';
+import TypingIndicator from './TypingIndicator'; // Phase 5
 import useChatStore from '../stores/chat-store';
-import { MessageCircle, Sparkles, Zap } from 'lucide-react';
+import { MessageCircle, Sparkles, Zap, Bot } from 'lucide-react';
 
 const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
+  const isWaiting = useChatStore((state) => state.isWaiting); // Phase 5
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom when messages update
@@ -70,6 +72,25 @@ const MessageList = () => {
             {messages.map((message, index) => (
               <Message key={index} message={message} />
             ))}
+
+            {/* Phase 5: Show typing indicator while waiting for first stream chunk */}
+            {isWaiting && (
+              <div className="flex justify-start mb-4 animate-fadeIn">
+                <div className="flex gap-3 max-w-[80%]">
+                  {/* Avatar - same as assistant messages */}
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-600 shadow-md">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+
+                  {/* Typing indicator bubble */}
+                  <div className="flex flex-col">
+                    <div className="px-4 py-3 rounded-2xl shadow-sm bg-white text-gray-800 border border-gray-100 rounded-tl-sm">
+                      <TypingIndicator />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div ref={messagesEndRef} />

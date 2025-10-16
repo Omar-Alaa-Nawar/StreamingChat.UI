@@ -19,6 +19,7 @@ import { create } from 'zustand';
 const useChatStore = create((set) => ({
   messages: [],
   isStreaming: false,
+  isWaiting: false, // Phase 5: Waiting for first stream chunk (LLM processing)
 
   // Add a user message to the chat
   addUserMessage: (content) => {
@@ -52,6 +53,11 @@ const useChatStore = create((set) => ({
   // Set the streaming state
   setIsStreaming: (isStreaming) => {
     set({ isStreaming });
+  },
+
+  // Phase 5: Set waiting state (before first stream chunk arrives)
+  setIsWaiting: (isWaiting) => {
+    set({ isWaiting });
   },
 }));
 
