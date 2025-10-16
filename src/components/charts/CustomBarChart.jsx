@@ -1,17 +1,30 @@
 import React from "react";
 
-const CustomBarChart = ({ labels, data, title, color = "#6366f1" }) => {
+const CustomBarChart = ({
+  labels,
+  data,
+  title,
+  color = "#6366f1",
+  theme = "light",
+}) => {
   if (!data || data.length === 0) return null;
 
+  const isDark = theme === "dark";
   const maxValue = Math.max(...data);
-  const barWidth = 100 / data.length;
   const chartHeight = 180; // Reduced to fit within container
+
+  // Theme-aware colors
+  const textColor = isDark ? "text-gray-300" : "text-gray-700";
+  const labelColor = isDark ? "text-gray-400" : "text-gray-600";
+  const axisColor = isDark ? "text-gray-500" : "text-gray-500";
+  const gridColor = isDark ? "border-gray-700" : "border-gray-200";
+  const tooltipBg = isDark ? "bg-gray-700" : "bg-gray-800";
 
   return (
     <div className="w-full relative pt-2 pb-8">
       {/* Chart Title */}
       {title && (
-        <div className="text-sm font-medium text-gray-700 mb-3 text-center">
+        <div className={`text-sm font-medium ${textColor} mb-3 text-center`}>
           {title}
         </div>
       )}
@@ -20,7 +33,7 @@ const CustomBarChart = ({ labels, data, title, color = "#6366f1" }) => {
       <div className="flex gap-2">
         {/* Y-Axis Labels */}
         <div
-          className="flex flex-col justify-between text-xs text-gray-500 w-12 shrink-0"
+          className={`flex flex-col justify-between text-xs ${axisColor} w-12 shrink-0`}
           style={{ height: `${chartHeight}px` }}
         >
           {[maxValue, maxValue * 0.75, maxValue * 0.5, maxValue * 0.25, 0].map(
@@ -40,7 +53,7 @@ const CustomBarChart = ({ labels, data, title, color = "#6366f1" }) => {
           {/* Y-Axis Grid Lines */}
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
             {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="border-b border-gray-200"></div>
+              <div key={i} className={`border-b ${gridColor}`}></div>
             ))}
           </div>
 
@@ -57,7 +70,9 @@ const CustomBarChart = ({ labels, data, title, color = "#6366f1" }) => {
                 style={{ maxWidth: "100px", minWidth: "40px" }}
               >
                 {/* Value Label (on hover) */}
-                <div className="absolute -top-6 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-20 pointer-events-none">
+                <div
+                  className={`absolute -top-6 ${tooltipBg} text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-20 pointer-events-none`}
+                >
                   {value.toLocaleString()}
                 </div>
 
@@ -67,7 +82,11 @@ const CustomBarChart = ({ labels, data, title, color = "#6366f1" }) => {
                   style={{
                     height: `${heightPixels}px`,
                     background: `linear-gradient(to top, ${color}, ${color}dd)`,
-                    boxShadow: "0 -2px 8px rgba(99, 102, 241, 0.3)",
+                    boxShadow: `0 -2px 8px ${
+                      isDark
+                        ? "rgba(129, 140, 248, 0.3)"
+                        : "rgba(99, 102, 241, 0.3)"
+                    }`,
                   }}
                 >
                   {/* Shimmer effect */}
@@ -75,7 +94,9 @@ const CustomBarChart = ({ labels, data, title, color = "#6366f1" }) => {
                 </div>
 
                 {/* X-Axis Label */}
-                <div className="text-xs text-gray-600 font-medium truncate w-full text-center mt-1">
+                <div
+                  className={`text-xs ${labelColor} font-medium truncate w-full text-center mt-1`}
+                >
                   {label}
                 </div>
               </div>

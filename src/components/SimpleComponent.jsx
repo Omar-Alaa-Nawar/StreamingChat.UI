@@ -63,24 +63,24 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
   if (isEmpty) {
     return (
       <div className="my-2 animate-fadeIn">
-        <div className="relative bg-gradient-to-br from-gray-50 to-white rounded-lg border-2 border-indigo-200 shadow-sm overflow-hidden">
+        <div className="relative bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-lg border-2 border-indigo-200 dark:border-indigo-800 shadow-sm overflow-hidden">
           <div className="relative p-4">
             {/* Skeleton header */}
             <div className="flex items-start justify-between mb-2">
               <div className="skeleton h-5 w-32 rounded"></div>
-              <div className="p-1.5 bg-gray-200 rounded-md skeleton">
+              <div className="p-1.5 bg-gray-200 dark:bg-gray-700 rounded-md skeleton">
                 <TrendingUp className="w-4 h-4 text-transparent" />
               </div>
             </div>
 
             {/* Skeleton description with placeholder text */}
-            <p className="text-gray-400 text-xs mb-3 leading-relaxed italic">
+            <p className="text-gray-400 dark:text-gray-500 text-xs mb-3 leading-relaxed italic">
               Loading card data...
             </p>
 
             {/* Skeleton value with informative placeholder */}
-            <div className="mb-3 p-3 bg-gray-100 rounded-md border border-gray-200">
-              <div className="text-xs text-gray-400 italic">
+            <div className="mb-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+              <div className="text-xs text-gray-400 dark:text-gray-500 italic">
                 <span className="font-medium">Units</span>
                 <br />
                 <span className="text-[10px]">
@@ -92,12 +92,12 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
             </div>
 
             {/* Skeleton timestamp */}
-            <div className="flex items-center gap-1.5 pt-2 border-t border-gray-200">
-              <Calendar className="w-3 h-3 text-gray-300" />
+            <div className="flex items-center gap-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <Calendar className="w-3 h-3 text-gray-300 dark:text-gray-600" />
               <div className="skeleton h-3 w-24 rounded"></div>
             </div>
           </div>
-          <div className="h-0.5 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300"></div>
+          <div className="h-0.5 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700"></div>
         </div>
       </div>
     );
@@ -107,8 +107,8 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
   return (
     <div className="my-2 animate-fadeIn">
       <div
-        className="relative bg-gradient-to-br from-gray-50 to-white rounded-lg
-                   border-2 border-indigo-200 shadow-sm hover:shadow-md
+        className="relative bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-lg
+                   border-2 border-indigo-200 dark:border-indigo-800 shadow-sm hover:shadow-md
                    transition-all duration-300 overflow-hidden"
       >
         {/* Card content */}
@@ -116,7 +116,7 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
           {/* Header */}
           <div className="flex items-start justify-between mb-2">
             {title !== undefined ? (
-              <h3 className="text-base font-bold text-gray-900 leading-tight">
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">
                 {title}
               </h3>
             ) : (
@@ -126,7 +126,7 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
               className={`p-1.5 ${
                 isComplete
                   ? "bg-gradient-to-br from-blue-500 to-indigo-600"
-                  : "bg-gray-200 skeleton"
+                  : "bg-gray-200 dark:bg-gray-700 skeleton"
               } rounded-md`}
             >
               <TrendingUp
@@ -139,7 +139,7 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
 
           {/* Description */}
           {description !== undefined ? (
-            <p className="text-gray-600 text-xs mb-3 leading-relaxed">
+            <p className="text-gray-600 dark:text-gray-300 text-xs mb-3 leading-relaxed">
               {description}
             </p>
           ) : (
@@ -150,16 +150,18 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
           <div
             className={`mb-3 p-3 rounded-md border ${
               isComplete
-                ? "bg-gradient-to-br from-blue-50 to-indigo-50 border-indigo-100"
-                : "bg-gray-100 border-gray-200"
+                ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-indigo-100 dark:border-indigo-800"
+                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
             }`}
           >
             {displayValue !== undefined ? (
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
                   {displayValue}
                 </span>
-                <span className="text-xs text-gray-500 font-medium">units</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  units
+                </span>
               </div>
             ) : (
               <div className="skeleton h-8 w-20 rounded"></div>
@@ -167,7 +169,7 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
           </div>
 
           {/* Timestamp footer */}
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 pt-2 border-t border-gray-200">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
             <Calendar className="w-3 h-3" />
             {displayTimestamp !== undefined ? (
               <span>{formatTimestamp(displayTimestamp)}</span>
@@ -182,7 +184,7 @@ const SimpleComponent = ({ id, data = {}, isStreaming = false }) => {
           className={`h-0.5 ${
             isComplete
               ? "bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600"
-              : "bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300"
+              : "bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700"
           }`}
         ></div>
       </div>

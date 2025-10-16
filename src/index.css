@@ -3,6 +3,45 @@
 @tailwind utilities;
 
 @layer base {
+  /* Phase 6.3: Comprehensive Theme CSS Variables */
+  :root {
+    /* Light mode defaults */
+    --color-bg: #f9fafb;
+    --color-surface: #ffffff;
+    --color-surface-alt: #f3f4f6;
+    --color-border: #e5e7eb;
+    --color-text: #1f2937;
+    --color-subtext: #6b7280;
+    --color-accent: #6366f1;
+    --color-accent-hover: #4f46e5;
+
+    /* Phase 6.4: Table and Chart specific colors */
+    --color-table-row: #ffffff;
+    --color-table-row-alt: #f9fafb;
+    --color-grid-line: #e5e7eb;
+  }
+
+  html.dark {
+    /* Dark mode overrides */
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-surface-alt: #334155;
+    --color-border: #334155;
+    --color-text: #f9fafb;
+    --color-subtext: #94a3b8;
+    --color-accent: #818cf8;
+    --color-accent-hover: #6366f1;
+
+    /* Phase 6.4: Dark mode table and chart colors */
+    --color-table-row: #0f172a;
+    --color-table-row-alt: #1e293b;
+    --color-grid-line: #475569;
+  }
+
+  html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
@@ -10,6 +49,8 @@
       "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: var(--color-bg);
+    color: var(--color-text);
   }
 
   code {
@@ -19,6 +60,12 @@
 }
 
 @layer utilities {
+  /* Phase 6.2: Global smooth transitions for hover effects */
+  * {
+    transition: background-color 0.25s ease, color 0.25s ease,
+      border-color 0.25s ease;
+  }
+
   /* Custom animations */
   @keyframes fadeIn {
     from {
@@ -95,6 +142,12 @@
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
   }
 
+  /* Dark mode skeleton loader */
+  html.dark .skeleton {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+    background-size: 400% 100%;
+  }
+
   /* Bar chart shimmer animation (Phase 4) */
   @keyframes bar-shimmer {
     0% {
@@ -132,6 +185,42 @@
     background: #94a3b8;
   }
 
+  /* Dark mode scrollbar */
+  html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+
+  html.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+
+  /* Custom horizontal scrollbar */
+  .custom-scrollbar-horizontal::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .custom-scrollbar-horizontal::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar-horizontal::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+  }
+
+  .custom-scrollbar-horizontal::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Dark mode horizontal scrollbar */
+  html.dark .custom-scrollbar-horizontal::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+
+  html.dark .custom-scrollbar-horizontal::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+
   /* Gradient text */
   .gradient-text {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -144,13 +233,15 @@
 
   /* Bounce animation for typing indicator dots */
   @keyframes typing-bounce {
-    0%, 80%, 100% {
+    0%,
+    80%,
+    100% {
       transform: scale(0);
       opacity: 0.4;
     }
     40% {
-      transform: scale(1.0);
-      opacity: 1.0;
+      transform: scale(1);
+      opacity: 1;
     }
   }
 
@@ -185,6 +276,11 @@
     animation-delay: 300ms;
   }
 
+  /* Phase 6.6: Dark mode glow effect for typing indicator */
+  .typing-glow {
+    filter: drop-shadow(0 0 6px var(--color-accent));
+  }
+
   /* Reduced motion support - accessibility */
   @media (prefers-reduced-motion: reduce) {
     .animate-typing-bounce {
@@ -196,5 +292,45 @@
       animation: none;
       opacity: 1;
     }
+  }
+
+  /* ==========================================================
+     🌗 Smooth Theme Transition (Phase 6.9 - Refined)
+     Applies smooth fade between dark/light themes with optimized timing
+     ========================================================== */
+
+  html {
+    transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  body,
+  #root,
+  #app {
+    transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Smooth fade for all Tailwind color changes - snappier but not harsh */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 0.35s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ==========================================================
+     🎯 Tooltip System (Phase 6.10)
+     Theme-adaptive tooltips with smooth transitions
+     ========================================================== */
+
+  .tooltip {
+    transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out,
+      border-color 0.5s ease-in-out;
+  }
+
+  /* Optional: Add subtle glow to dark mode tooltips */
+  .dark .tooltip {
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.15);
   }
 }

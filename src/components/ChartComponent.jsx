@@ -1,9 +1,13 @@
 import React, { useMemo } from "react";
+import { useTheme } from "../context/ThemeContext";
 import CustomBarChart from "./charts/CustomBarChart";
 import CustomLineChart from "./charts/CustomLineChart";
 import CustomPieChart from "./charts/CustomPieChart";
 
 const ChartComponent = ({ data }) => {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   // Handle both backend format (chart_type, x_axis, series) and frontend format (chartType, labels, datasets)
   const chartType = data.chartType || data.chart_type || "bar";
   const title = data.title || "Chart";
@@ -58,7 +62,11 @@ const ChartComponent = ({ data }) => {
 
   // Render skeleton for empty state
   const renderSkeleton = () => (
-    <div className="h-64 flex items-end justify-around bg-gray-50 rounded-xl p-8 gap-4">
+    <div
+      className={`h-64 flex items-end justify-around rounded-xl p-8 gap-4 ${
+        isDark ? "bg-gray-800" : "bg-gray-50"
+      }`}
+    >
       <div className="skeleton h-32 w-12 rounded"></div>
       <div className="skeleton h-40 w-12 rounded"></div>
       <div className="skeleton h-48 w-12 rounded"></div>
@@ -82,6 +90,7 @@ const ChartComponent = ({ data }) => {
             data={dataPoints}
             title={chartLabel}
             color={chartColor}
+            theme={theme}
           />
         );
       case "line":
@@ -91,6 +100,7 @@ const ChartComponent = ({ data }) => {
             data={dataPoints}
             title={chartLabel}
             color={chartColor}
+            theme={theme}
           />
         );
       case "pie":
@@ -100,12 +110,21 @@ const ChartComponent = ({ data }) => {
             data={dataPoints}
             title={chartLabel}
             colors={datasets[0]?.backgroundColor}
+            theme={theme}
           />
         );
       default:
         return (
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-xl">
-            <p className="text-gray-500 text-sm">
+          <div
+            className={`h-64 flex items-center justify-center rounded-xl ${
+              isDark ? "bg-gray-800" : "bg-gray-50"
+            }`}
+          >
+            <p
+              className={`text-sm ${
+                isDark ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
               Unsupported chart type: {chartType}
             </p>
           </div>
@@ -113,21 +132,29 @@ const ChartComponent = ({ data }) => {
     }
   };
 
-  // Container styling based on state
+  // Container styling based on state and theme
   const containerClasses = [
     "border rounded-2xl p-4 transition-all duration-300",
-    isEmpty && "border-gray-300 bg-gray-50",
-    isPartial && "border-indigo-400 bg-white",
+    isEmpty &&
+      (isDark ? "border-gray-700 bg-gray-800" : "border-gray-300 bg-gray-50"),
+    isPartial &&
+      (isDark ? "border-indigo-600 bg-gray-900" : "border-indigo-400 bg-white"),
     isComplete &&
-      "border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-md",
+      (isDark
+        ? "border-indigo-500 bg-gradient-to-br from-indigo-950/30 to-blue-950/30 shadow-lg"
+        : "border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-md"),
   ]
     .filter(Boolean)
     .join(" ");
 
   const iconClasses = [
     "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
-    isEmpty && "bg-gray-200 text-gray-400",
-    isPartial && "bg-indigo-100 text-indigo-600",
+    isEmpty &&
+      (isDark ? "bg-gray-700 text-gray-500" : "bg-gray-200 text-gray-400"),
+    isPartial &&
+      (isDark
+        ? "bg-indigo-900/50 text-indigo-400"
+        : "bg-indigo-100 text-indigo-600"),
     isComplete && "bg-gradient-to-br from-indigo-400 to-blue-500 text-white",
   ]
     .filter(Boolean)
@@ -154,24 +181,42 @@ const ChartComponent = ({ data }) => {
           </svg>
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-gray-800">
+          <h3
+            className={`text-sm font-semibold ${
+              isDark ? "text-gray-200" : "text-gray-800"
+            }`}
+          >
             {isEmpty ? "Loading chart..." : title || "Chart"}
           </h3>
         </div>
         {isComplete && (
-          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+          <span
+            className={`px-2 py-1 text-xs font-medium rounded-full ${
+              isDark
+                ? "bg-green-900/50 text-green-400"
+                : "bg-green-100 text-green-700"
+            }`}
+          >
             ✓ Complete
           </span>
         )}
       </div>
 
       {/* Chart Area */}
-      <div className="bg-white rounded-xl p-4 min-h-[16rem]">
+      <div
+        className={`rounded-xl p-4 min-h-[16rem] ${
+          isDark ? "bg-gray-900/50" : "bg-white"
+        }`}
+      >
         {renderChart()}
       </div>
 
       {/* Footer */}
-      <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+      <div
+        className={`mt-3 flex items-center justify-between text-xs ${
+          isDark ? "text-gray-400" : "text-gray-500"
+        }`}
+      >
         <span>
           {isEmpty && "Waiting for data..."}
           {isPartial &&
@@ -179,7 +224,11 @@ const ChartComponent = ({ data }) => {
           {isComplete && `${dataPoints.length} data points`}
         </span>
         {isComplete && (
-          <span className="text-indigo-600 font-medium">
+          <span
+            className={`font-medium ${
+              isDark ? "text-indigo-400" : "text-indigo-600"
+            }`}
+          >
             {chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart
           </span>
         )}

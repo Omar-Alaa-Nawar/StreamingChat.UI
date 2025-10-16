@@ -1,33 +1,38 @@
-import React from 'react';
-import MessageList from './MessageList';
-import ChatInput from './ChatInput';
-import { Bot } from 'lucide-react';
+import React from "react";
+import MessageList from "./MessageList";
+import ChatInput from "./ChatInput";
+import SuggestedPrompts from "./SuggestedPrompts";
+import useChat from "../hooks/useChat";
+import useChatStore from "../stores/chat-store";
 
+/**
+ * ChatContainer Component
+ *
+ * Phase 6.10 Updates:
+ * - Smart suggested prompts positioning (compact mode when chat active)
+ * - Fixed layout: only MessageList scrolls, prompts and input stay fixed
+ * - Proper flex layout with overflow handling
+ * - Theme-aware background colors
+ */
 const ChatContainer = () => {
-  return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Modern Header with Gradient */}
-      <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg">
-        <div className="absolute inset-0 bg-black opacity-5"></div>
-        <div className="relative px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <Bot className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">StreamForge</h1>
-              <p className="text-sm text-blue-100 font-medium">AI Streaming Chat</p>
-            </div>
-          </div>
-        </div>
-        {/* Bottom gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-      </div>
+  const { handleSubmit } = useChat();
+  const messages = useChatStore((state) => state.messages);
 
-      {/* Messages */}
+  const handlePromptSelect = (prompt) => {
+    handleSubmit(prompt);
+  };
+
+  const hasMessages = messages.length > 0;
+
+  return (
+    <div className="flex flex-col flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors">
+      {/* Messages - Scrollable area */}
       <MessageList />
 
-      {/* Input */}
+      {/* Suggested Prompts - Always visible, adapts layout */}
+      <SuggestedPrompts onSelect={handlePromptSelect} compact={hasMessages} />
+
+      {/* Input - Fixed at bottom */}
       <ChatInput />
     </div>
   );

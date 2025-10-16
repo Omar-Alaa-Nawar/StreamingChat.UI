@@ -1,14 +1,32 @@
 import React from "react";
+import { useTheme } from "../../context/ThemeContext";
 
-const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
+const CustomLineChart = ({
+  labels,
+  data,
+  title,
+  color = "#6366f1",
+  theme: themeProp, // Keep prop for backwards compatibility
+}) => {
+  // Use theme from context directly for real-time updates
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  // Check data after hooks are called
   if (!data || data.length === 0) return null;
-
   const maxValue = Math.max(...data);
   const minValue = Math.min(...data);
   const range = maxValue - minValue || 1;
   const width = 100;
   const height = 100;
   const padding = 5;
+
+  // Theme-aware colors
+  const textColor = isDark ? "text-gray-300" : "text-gray-700";
+  const labelColor = isDark ? "text-gray-400" : "text-gray-600";
+  const axisColor = isDark ? "text-gray-500" : "text-gray-500";
+  const gridColor = isDark ? "#475569" : "#e5e7eb"; // slate-600 : gray-200
+  const tooltipBg = isDark ? "bg-gray-700" : "bg-gray-800";
 
   // Calculate SVG path points
   const points = data.map((value, index) => {
@@ -32,7 +50,7 @@ const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
     <div className="w-full relative pt-2 pb-8">
       {/* Chart Title */}
       {title && (
-        <div className="text-sm font-medium text-gray-700 mb-3 text-center">
+        <div className={`text-sm font-medium ${textColor} mb-3 text-center`}>
           {title}
         </div>
       )}
@@ -41,7 +59,7 @@ const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
       <div className="flex gap-2">
         {/* Y-Axis Labels */}
         <div
-          className="flex flex-col justify-between text-xs text-gray-500 w-12 shrink-0"
+          className={`flex flex-col justify-between text-xs ${axisColor} w-12 shrink-0`}
           style={{ height: "180px" }}
         >
           {[
@@ -72,7 +90,7 @@ const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
                 y1={y}
                 x2={width - padding}
                 y2={y}
-                stroke="#e5e7eb"
+                stroke={gridColor}
                 strokeWidth="0.5"
               />
             ))}
@@ -106,7 +124,7 @@ const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
 
             {/* Data Points */}
             {points.map((point, index) => (
-              <g key={index} className="group cursor-pointer">
+              <g key={index}>
                 {/* Point Circle */}
                 <circle
                   cx={point.x}
@@ -115,7 +133,7 @@ const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
                   fill="white"
                   stroke={color}
                   strokeWidth="1.5"
-                  className="transition-all duration-200 group-hover:r-2"
+                  className="transition-all duration-200"
                 />
 
                 {/* Hover Effect */}
@@ -125,16 +143,37 @@ const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
                   r="3"
                   fill={color}
                   opacity="0"
-                  className="group-hover:opacity-20 transition-opacity duration-200"
+                  className="transition-opacity duration-200"
                 />
-
-                {/* Tooltip on hover */}
-                <title>{`${
-                  point.label
-                }: ${point.value.toLocaleString()}`}</title>
               </g>
             ))}
           </svg>
+
+          {/* HTML Tooltips overlaid on SVG */}
+          {points.map((point, index) => (
+            <div
+              key={`tooltip-${index}`}
+              className="absolute group cursor-pointer"
+              style={{
+                left: `${point.x}%`,
+                top: `${point.y}%`,
+                transform: "translate(-50%, -50%)",
+                width: "24px",
+                height: "24px",
+                zIndex: 10,
+              }}
+            >
+              {/* Invisible hover target */}
+              <div className="w-full h-full"></div>
+
+              {/* Tooltip */}
+              <div
+                className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 ${tooltipBg} text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-20`}
+              >
+                {point.label}: {point.value.toLocaleString()}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -143,7 +182,7 @@ const CustomLineChart = ({ labels, data, title, color = "#6366f1" }) => {
         {points.map((point, index) => (
           <div
             key={index}
-            className="absolute text-xs text-gray-600 font-medium transform -translate-x-1/2"
+            className={`absolute text-xs ${labelColor} font-medium transform -translate-x-1/2`}
             style={{
               left: `${point.x}%`,
             }}
