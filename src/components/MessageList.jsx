@@ -3,17 +3,70 @@ import { AnimatePresence } from "framer-motion";
 import Message from "./Message";
 import TypingIndicator from "./TypingIndicator"; // Phase 5
 import useChatStore from "../stores/chat-store";
+import useChat from "../hooks/useChat";
 import { MessageCircle, Sparkles, Zap, Bot } from "lucide-react";
 
 const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
   const isWaiting = useChatStore((state) => state.isWaiting); // Phase 5
+  const getLastUserMessage = useChatStore((state) => state.getLastUserMessage);
+  const removeLastAgentMessage = useChatStore((state) => state.removeLastAgentMessage);
+  const updateUserMessage = useChatStore((state) => state.updateUserMessage);
+  const removeMessagesAfterIndex = useChatStore((state) => state.removeMessagesAfterIndex);
+  const showToast = useChatStore((state) => state.showToast);
   const messagesEndRef = useRef(null);
+  const { handleSubmit } = useChat();
 
   // Auto-scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Phase 6.12: Regenerate last agent response
+  const handleRegenerate = async () => {
+    const lastUserMessage = getLastUserMessage();
+
+    if (!lastUserMessage) {
+      showToast({
+        message: "No message to regenerate",
+        type: "warning",
+        duration: 2000,
+      });
+      return;
+    }
+
+    // Remove last agent message(s)
+    removeLastAgentMessage();
+
+    // Resend the last user message (skip adding it since it's already there)
+    await handleSubmit(lastUserMessage, { skipAddingUserMessage: true });
+
+    showToast({
+      message: "Regenerating response...",
+      type: "info",
+      duration: 2000,
+    });
+  };
+
+  // Phase 6.13: Edit user message and regenerate conversation from that point
+  // ChatGPT-style: replaces message in-place, removes all after it, regenerates
+  const handleEditMessage = async (messageIndex, newContent) => {
+    // Update the user message in-place and mark as edited
+    updateUserMessage(messageIndex, newContent);
+
+    // Remove all messages after this one (including agent responses)
+    removeMessagesAfterIndex(messageIndex);
+
+    // Resend the edited message to regenerate the conversation
+    // Skip adding a new user message since we already updated it in-place
+    await handleSubmit(newContent, { skipAddingUserMessage: true });
+
+    showToast({
+      message: "Message updated. Generating new response...",
+      type: "success",
+      duration: 2000,
+    });
+  };
 
   return (
     <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -87,9 +140,23 @@ const MessageList = () => {
           </div>
         ) : (
           <div className="space-y-4 pt-6">
-            {messages.map((message, index) => (
-              <Message key={index} message={message} />
-            ))}
+            {messages.map((message, index) => {
+              // Check if this is the last agent message
+              const isLastAgentMessage =
+                message.sender === "agent" &&
+                index === messages.length - 1;
+
+              return (
+                <Message
+                  key={index}
+                  message={message}
+                  messageIndex={index}
+                  isLastAgentMessage={isLastAgentMessage}
+                  onRegenerate={handleRegenerate}
+                  onEdit={handleEditMessage}
+                />
+              );
+            })}
 
             {/* Phase 5: Show typing indicator while waiting for first stream chunk */}
             <AnimatePresence mode="wait">

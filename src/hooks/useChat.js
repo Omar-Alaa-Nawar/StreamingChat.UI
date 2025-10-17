@@ -372,11 +372,14 @@ const useChat = () => {
     }
   };
 
-  const handleSubmit = async (userInput) => {
+  const handleSubmit = async (userInput, options = {}) => {
     if (!userInput.trim()) return;
 
-    // Add user message to chat
-    addUserMessage(userInput);
+    // Phase 6.13: Skip adding user message if it's a regeneration/edit
+    // (message already exists in chat history)
+    if (!options.skipAddingUserMessage) {
+      addUserMessage(userInput);
+    }
 
     // Start streaming
     setIsStreaming(true);

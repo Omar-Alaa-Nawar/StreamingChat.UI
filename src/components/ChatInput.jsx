@@ -20,6 +20,16 @@ const ChatInput = () => {
     stopStreaming();
   };
 
+  // Phase 6.12: Handle keyboard shortcuts
+  const handleKeyDown = (e) => {
+    // Enter without Shift - Submit
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSubmit(e);
+    }
+    // Shift+Enter - Allow newline (default textarea behavior)
+  };
+
   return (
     <form
       onSubmit={onSubmit}
@@ -30,22 +40,32 @@ const ChatInput = () => {
           {/* Input Container */}
           <div className="flex-1 relative">
             <div className="relative">
-              <input
-                type="text"
+              <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
                 disabled={isStreaming}
                 placeholder={
-                  isStreaming ? "AI is thinking..." : "Ask me anything..."
+                  isStreaming ? "AI is thinking..." : "Type your message..."
                 }
+                rows={1}
                 className="w-full px-5 py-4 pr-12 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-600 rounded-2xl
                          focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:focus:ring-indigo-900/50
                          disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-500 dark:disabled:text-gray-500
                          transition-all duration-200 text-[15px] shadow-sm
-                         text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                         text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500
+                         resize-none overflow-hidden min-h-[56px] max-h-[200px]"
+                style={{
+                  height: "auto",
+                  minHeight: "56px",
+                }}
+                onInput={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
+                }}
               />
               {!isStreaming && input.trim() && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="absolute right-3 top-4">
                   <Sparkles className="w-5 h-5 text-indigo-400 dark:text-indigo-300 animate-pulse" />
                 </div>
               )}
@@ -94,7 +114,7 @@ const ChatInput = () => {
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
             Powered by StreamForge AI
           </span>
-          <span>Press Enter to send</span>
+          <span>Press Enter to send, Shift+Enter for new line</span>
         </div>
       </div>
     </form>
